@@ -8,9 +8,7 @@ export const AuthMiddleware = async(req : Request , res : Response , next : Next
         if(token == undefined){
             throw new Error("Token is not Provided")
         }
-        
         const user = await Authservice.DecodeUser(token) as { id: string; email: string }
-
         if(req.body == undefined){
             // @ts-ignore
             req.user = user

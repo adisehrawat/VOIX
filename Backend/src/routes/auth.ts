@@ -71,34 +71,36 @@ authrouter.post("/update-location", AuthMiddleware, async (req, res) => {
 
 authrouter.get("/me"  , AuthMiddleware , async(req , res) =>{
     try {
-        
-
         // @ts-ignore
         const id = req.user.id
-
         const data = await Authservice.GetUserbyid(id)
-
         res.json({success : true , data : data})
-
     } catch (error) {
         res.json({success : false })
     }
 })
 
 authrouter.post("/user" , async(req , res)=>{
-
     try {
         const email = req.body.email 
-
         if(email == null || email == undefined){
             throw new Error("email not provided")
         }
-
         const data = await Authservice.GetOpenUser(email)
         res.json({success : true , data : data})
-
     } catch (error) {
         res.json({success : false, error : error})
     }
 
 } )
+
+
+authrouter.get("/searchuser/:name" , async(req , res) =>{
+    try {
+        const name = req.params.name ; 
+        const data  =await Authservice.GetUserbyQuery(name)
+        res.json({success : true , data : data})
+    } catch (error) {
+        res.json({success : false })
+    }
+})

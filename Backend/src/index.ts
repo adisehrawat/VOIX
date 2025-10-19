@@ -3,7 +3,6 @@ import dotenv from "dotenv"
 import   {authrouter} from "./routes/auth"
 import { buzzrouter } from "./routes/buzz";
 import { friendrouter } from "./routes/friend";
-import { success } from "zod";
 import { AuthMiddleware } from "./middlewares";
 dotenv.config() ; 
 
@@ -21,26 +20,10 @@ app.use("/api/v1/friends"  , friendrouter)
 
 app.get("/health"  ,   (req, res)=>{
 
-
-
-
     res.json({success : true , message : "I am doing good Homie"})
 })
 
 
-
-app.post("/testing"  , AuthMiddleware , (req,res) =>{
-
-    try {
-        
-        console.log(req.body)
-
-        res.json({success : true})
-    } catch (error) {
-
-        res.json({success : false})
-    }
-})
 
 app.listen(PORT , ()=>{
 

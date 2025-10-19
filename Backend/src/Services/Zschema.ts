@@ -1,7 +1,7 @@
-import { email, z } from "zod"
+import {  z } from "zod"
 
 export const SignupSchema = z.object({
-  email: z.string(),
+  email: z.email(),
   password: z.string().min(8).optional(),
   name: z.string().min(3),
   imageUrl: z.string().optional(),
@@ -10,7 +10,7 @@ export const SignupSchema = z.object({
 
 
 export const SiginSchema = z.object({
-  email: z.string(),
+  email: z.email(),
   password: z.string()
 })
 

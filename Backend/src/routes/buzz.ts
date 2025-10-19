@@ -3,8 +3,6 @@ import { AuthMiddleware } from "../middlewares";
 import {CreatComment , CreateBuzz , CreateVote}  from "../Services/Zschema"
 import { BuzzService } from "../Services/BuzzService";
 
-
-
 export const buzzrouter = express.Router() ; 
 
 
@@ -52,6 +50,18 @@ buzzrouter.post("/vote/create"  , AuthMiddleware , async(req,res)=>{
 
 })
 
+
+buzzrouter.post("/vote/delete"  ,AuthMiddleware , async(req , res)=>{
+    try {
+        const userid = req.body.user.id 
+        const postid =  req.body.postid 
+        const result  = await BuzzService.DelteVote(userid , postid)
+        res.json({success : true })
+    } catch (error) {
+        res.json({success : false , error : error })
+    }
+})
+
 buzzrouter.get("/buzz/:pagenumber"  , async(req ,res) =>{
     try {
         const pagenumber = req.params.pagenumber ; 
@@ -67,6 +77,31 @@ buzzrouter.get("/buzzcomment/:buzzid"  , async(req , res)=>{
     try {
         const id  = req.params.buzzid 
         const data = await BuzzService.GetBuzzReply(id)
+        res.json({success : true , data : data})
+    } catch (error) {
+        res.json({success : false , error : error })
+    }
+})
+
+
+
+
+buzzrouter.get("/Searchbuzz/:query"  , async(req , res)=>{
+    try {
+        const data =await  BuzzService.GetBuzzbyQuery(req.params.query) ; 
+        res.json({success : true , data : data})
+    } catch (error) {
+        res.json({success : false , error : error })
+    }
+})
+
+
+buzzrouter.get("/followingbuzz/:pagenumber"  , AuthMiddleware , async(req , res)=>{
+    try {
+        const pagenumber = req.params.pagenumber ; 
+        // @ts-ignore
+        const userid = req.user.id 
+        const data = await BuzzService.getBuzzBasedOnFriends(userid , parseInt(pagenumber)  )
         res.json({success : true , data : data})
     } catch (error) {
         res.json({success : false , error : error })
