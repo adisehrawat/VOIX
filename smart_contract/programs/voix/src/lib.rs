@@ -17,4 +17,28 @@ declare_id!("DgCkfcZY1GJkLZd5htKob4XDorcpmnP9UP4f6kXo8Up7");
 #[program]
 pub mod voix {
     use super::*;
+
+    /// Instruction to initialize the platform's global configuration (only admin)
+    pub fn initialize_config(ctx: Context<InitializeConfig>) -> Result<()> {
+        instructions::initialize_config::handler(ctx)
+    }
+
+    /// Instruction for a new user to create their on-chain UserAccount PDA
+    pub fn initialize_user(ctx: Context<InitializeUser>) -> Result<()> {
+        instructions::initialize_user::handler(ctx)
+    }
+
+    /// Instruction for the admin (backend) to submit the latest Merkle root of all off-chain content (posts, comments, etc.)
+    pub fn submit_merkle_root(
+        ctx: Context<SubmitMerkleRoot>,
+        merkle_root: [u8; 32],
+        epoch: u64,
+    ) -> Result<()> {
+        instructions::submit_merkle_root::handler(ctx, merkle_root, epoch)
+    }
+
+    /// Instruction for the admin (backend) to update a user's on-chain karma score.
+    pub fn update_user_karma(ctx: Context<UpdateUserKarma>, new_karma: u32) -> Result<()> {
+        instructions::update_user_karma::handler(ctx, new_karma)
+    }
 }
