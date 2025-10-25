@@ -15,3 +15,6 @@ pub use tip_user_spl::*;
 
 pub mod update_user_karma;
 pub use update_user_karma::*;
+
+pub mod mint_milestone_nft;
+pub use mint_milestone_nft::*;

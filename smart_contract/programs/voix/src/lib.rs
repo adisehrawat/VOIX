@@ -41,4 +41,14 @@ pub mod voix {
     pub fn update_user_karma(ctx: Context<UpdateUserKarma>, new_karma: u32) -> Result<()> {
         instructions::update_user_karma::handler(ctx, new_karma)
     }
+
+    /// Instruction for a user to tip another user with native SOL.
+    pub fn tip_user_sol(ctx: Context<TipUserSol>, amount: u64) -> Result<()> {
+        instructions::tip_user_sol::handler(ctx, amount)
+    }
+
+    /// Instruction for a user to tip another user with any SPL Token (e.g., USDC).
+    pub fn tip_user_spl(ctx: Context<TipUserSpl>, amount: u64) -> Result<()> {
+        instructions::tip_user_spl::handler(ctx, amount)
+    }
 }
