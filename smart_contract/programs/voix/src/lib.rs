@@ -51,4 +51,15 @@ pub mod voix {
     pub fn tip_user_spl(ctx: Context<TipUserSpl>, amount: u64) -> Result<()> {
         instructions::tip_user_spl::handler(ctx, amount)
     }
+
+    /// Instruction for a user to mint a milestone NFT (e.g., "Bronze Badge")
+    pub fn mint_milestone_nft(
+        ctx: Context<MintMilestoneNft>,
+        milestone_level: u8,
+        name: String,
+        symbol: String,
+        uri: String,
+    ) -> Result<()> {
+        instructions::mint_milestone_nft::handler(ctx, milestone_level, name, symbol, uri)
+    }
 }
