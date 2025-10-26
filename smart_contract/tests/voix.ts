@@ -1,458 +1,1058 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
+import {
+  PublicKey,
+  Keypair,
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+} from "@solana/web3.js";
+import {
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress,
+  createMint,
+  mintTo,
+  getAccount,
+  createAssociatedTokenAccountInstruction,
+} from "@solana/spl-token";
+import * as assert from "assert/strict";
 import { Voix } from "../target/types/voix";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { expect } from "chai";
 
-describe("voix", () => {
-  // Configure the client to use the local cluster
+const { BN } = anchor;
+
+const MPL_TOKEN_METADATA_PROGRAM_ID = new PublicKey(
+  "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+);
+
+describe("voix: Contract Tests (Comprehensive Suite)", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
-  const program = anchor.workspace.Voix as Program<Voix>;
 
-  const signer = provider.wallet as anchor.Wallet;
+  const program = anchor.workspace.voix as Program<Voix>;
+  const connection = provider.connection;
 
-  describe("initialize_user", () => {
-    it("Should initialize a user account successfully", async () => {
-      const [userPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("user"), signer.publicKey.toBuffer()],
-        program.programId
+  // --- Global Test Accounts ---
+  const admin = Keypair.generate();
+  const user1 = Keypair.generate();
+  const user2 = Keypair.generate();
+  const nonAdmin = Keypair.generate();
+
+  // --- PDA Constants and Addresses ---
+  const CONFIG_SEED = Buffer.from("config");
+  const USER_SEED = Buffer.from("user");
+  const MINT_AUTHORITY_SEED = Buffer.from("mint_authority");
+  const programId = program.programId;
+
+  // Global Config PDA
+  const [globalConfigPda] = PublicKey.findProgramAddressSync(
+    [CONFIG_SEED],
+    programId
+  );
+
+  // PDA for Mint Authority
+  const [mintAuthorityPda] = PublicKey.findProgramAddressSync(
+    [MINT_AUTHORITY_SEED],
+    programId
+  );
+
+  // PDA for User 1
+  const [user1AccountPda] = PublicKey.findProgramAddressSync(
+    [USER_SEED, user1.publicKey.toBuffer()],
+    programId
+  );
+
+  // PDA for User 2
+  const [user2AccountPda] = PublicKey.findProgramAddressSync(
+    [USER_SEED, user2.publicKey.toBuffer()],
+    programId
+  );
+
+  // --- Helper Functions ---
+  const airdrop = async (publicKey: PublicKey, amount: number) => {
+    const tx = await connection.requestAirdrop(publicKey, amount);
+    await connection.confirmTransaction(tx, "confirmed");
+  };
+
+  // --- Initialization and Setup ---
+  before(async () => {
+    // Airdrop SOL for all users for rent and transactions
+    const airdropAmount = 10 * LAMPORTS_PER_SOL;
+    await Promise.all([
+      airdrop(admin.publicKey, airdropAmount),
+      airdrop(user1.publicKey, airdropAmount),
+      airdrop(user2.publicKey, airdropAmount),
+      airdrop(nonAdmin.publicKey, airdropAmount),
+    ]);
+
+    // Initialize the Global Config (SETUP FOR ALL TESTS)
+    await program.methods
+      .initializeConfig()
+      .accounts({
+        admin: admin.publicKey,
+        globalConfig: globalConfigPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([admin])
+      .rpc();
+  });
+
+  // ======================================================================
+  // A. Config & User Initialization
+  // ======================================================================
+  describe("A. Config & User Initialization", () => {
+    it("1. initialize_config: Confirms successful initialization", async () => {
+      const configAccount = await program.account.globalConfig.fetch(
+        globalConfigPda
       );
-
-      // Call the initialize_user instruction
-      // Note: 'user' PDA is auto-derived by Anchor, only pass signer
-      const tx = await program.methods
-        .initializeUser()
-        .accounts({
-          signer: signer.publicKey,
-        })
-        .rpc();
-
-      console.log("Initialize user transaction signature:", tx);
-
-      // Fetch the created account
-      const userAccount = await program.account.user.fetch(userPda);
-
-      // Assertions
-      expect(userAccount.userPubkey.toString()).to.equal(
-        signer.publicKey.toString()
+      // Verify initial state
+      assert.ok(
+        configAccount.admin.equals(admin.publicKey),
+        "Admin key mismatch"
       );
-      expect(userAccount.createdAt.toNumber()).to.be.greaterThan(0);
-      expect(userAccount.karmaMilestones).to.be.an("array").that.is.empty;
-
-      console.log("✅ User account created:", {
-        userPubkey: userAccount.userPubkey.toString(),
-        createdAt: new Date(userAccount.createdAt.toNumber() * 1000).toISOString(),
-        karmaMilestones: userAccount.karmaMilestones,
-      });
+      assert.equal(
+        configAccount.epoch.toNumber(),
+        0,
+        "Initial epoch must be 0"
+      );
     });
 
-    it("Should fail when trying to initialize the same user twice", async () => {
+    it("2. initialize_config: Fails on re-initialization (Account already in use)", async () => {
+      await assert.rejects(
+        program.methods
+          .initializeConfig()
+          .accounts({
+            admin: admin.publicKey,
+            globalConfig: globalConfigPda,
+            systemProgram: SystemProgram.programId,
+          })
+          .signers([admin])
+          .rpc(),
+        (e: Error) => {
+          return e.message.includes("already in use");
+        },
+        "Transaction should have failed on re-initialization"
+      );
+    });
 
-      const [userPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("user"), signer.publicKey.toBuffer()],
-        program.programId
+    it("3. initialize_user: Successfully initializes a user account (User 1)", async () => {
+      await program.methods
+        .initializeUser()
+        .accounts({
+          user: user1.publicKey,
+          userAccount: user1AccountPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([user1])
+        .rpc();
+
+      const userAccount = await program.account.userAccount.fetch(
+        user1AccountPda
       );
 
+      // Verify initial UserAccount state
+      assert.ok(
+        userAccount.userPubkey.equals(user1.publicKey),
+        "User Pubkey mismatch"
+      );
+      assert.equal(userAccount.karma, 0, "Initial karma should be 0");
+      assert.equal(
+        userAccount.mintedMilestones,
+        0,
+        "Initial milestones should be 0"
+      );
+      assert.equal(
+        userAccount.totalSolTipped.toNumber(),
+        0,
+        "Initial SOL tipped should be 0"
+      );
+    });
+  });
+
+  // ======================================================================
+  // B. Merkle Root Submission
+  // ======================================================================
+  describe("B. Merkle Root Submission", () => {
+    const root1 = Buffer.from(Array.from({ length: 32 }, (_, i) => i + 1));
+    const root2 = Buffer.from(Array.from({ length: 32 }, (_, i) => i + 33));
+
+    it("1. submit_merkle_root: Admin submits the first Merkle root (epoch 1)", async () => {
+      const newEpoch = new BN(1);
+      await program.methods
+        .submitMerkleRoot(Array.from(root1) as [number, ...number[]], newEpoch)
+        .accounts({
+          admin: admin.publicKey,
+          globalConfig: globalConfigPda,
+        })
+        .signers([admin])
+        .rpc();
+
+      const configAccount = await program.account.globalConfig.fetch(
+        globalConfigPda
+      );
+
+      assert.ok(configAccount.epoch.eq(newEpoch), "Epoch was not updated to 1");
+      assert.ok(
+        Buffer.from(configAccount.merkleRoot).equals(root1),
+        "Merkle root mismatch"
+      );
+    });
+
+    it("2. submit_merkle_root: Admin submits a new root with sequential epoch (epoch 2)", async () => {
+      const newEpoch = new BN(2);
+      await program.methods
+        .submitMerkleRoot(Array.from(root2) as [number, ...number[]], newEpoch)
+        .accounts({
+          admin: admin.publicKey,
+          globalConfig: globalConfigPda,
+        })
+        .signers([admin])
+        .rpc();
+
+      const configAccount = await program.account.globalConfig.fetch(
+        globalConfigPda
+      );
+
+      assert.ok(configAccount.epoch.eq(newEpoch), "Epoch was not updated to 2");
+      assert.ok(
+        Buffer.from(configAccount.merkleRoot).equals(root2),
+        "Merkle root mismatch"
+      );
+    });
+
+    it("3. submit_merkle_root: Fails if non-admin attempts submission (VoixError::Unauthorized)", async () => {
+      const newEpoch = new BN(3);
+      await assert.rejects(
+        program.methods
+          .submitMerkleRoot(
+            Array.from(root1) as [number, ...number[]],
+            newEpoch
+          )
+          .accounts({
+            admin: nonAdmin.publicKey, // Wrong admin
+            globalConfig: globalConfigPda,
+          })
+          .signers([nonAdmin])
+          .rpc(),
+        (e: anchor.AnchorError) => {
+          return e.error.errorCode.code === "Unauthorized";
+        },
+        "Should have failed with VoixError::Unauthorized"
+      );
+    });
+
+    it("4. submit_merkle_root: Fails if admin submits a non-sequential epoch (VoixError::InvalidEpoch)", async () => {
+      const invalidEpoch = new BN(1); // Current epoch is 2
+      await assert.rejects(
+        program.methods
+          .submitMerkleRoot(
+            Array.from(root1) as [number, ...number[]],
+            invalidEpoch
+          )
+          .accounts({
+            admin: admin.publicKey,
+            globalConfig: globalConfigPda,
+          })
+          .signers([admin])
+          .rpc(),
+        (e: anchor.AnchorError) => {
+          return e.error.errorCode.code === "InvalidEpoch";
+        },
+        "Should have failed with VoixError::InvalidEpoch"
+      );
+    });
+  });
+
+  // ======================================================================
+  // C. Update User Karma
+  // ======================================================================
+  describe("C. Update User Karma", () => {
+    it("1. update_user_karma: Admin successfully updates User 1's karma", async () => {
+      const newKarma = 5000;
+      await program.methods
+        .updateUserKarma(newKarma)
+        .accounts({
+          admin: admin.publicKey,
+          globalConfig: globalConfigPda,
+          userAccount: user1AccountPda,
+          userToUpdate: user1.publicKey,
+        })
+        .signers([admin])
+        .rpc();
+
+      const userAccount = await program.account.userAccount.fetch(
+        user1AccountPda
+      );
+      assert.equal(
+        userAccount.karma,
+        newKarma,
+        "Karma was not updated correctly"
+      );
+    });
+
+    it("2. update_user_karma: Fails if a non-admin attempts to update karma (VoixError::Unauthorized)", async () => {
+      const newKarma = 999;
+      await assert.rejects(
+        program.methods
+          .updateUserKarma(newKarma)
+          .accounts({
+            admin: nonAdmin.publicKey, // Wrong admin
+            globalConfig: globalConfigPda,
+            userAccount: user1AccountPda,
+            userToUpdate: user1.publicKey,
+          })
+          .signers([nonAdmin])
+          .rpc(),
+        (e: anchor.AnchorError) => {
+          return e.error.errorCode.code === "Unauthorized";
+        },
+        "Should have failed with VoixError::Unauthorized"
+      );
+    });
+  });
+
+  // ======================================================================
+  // D. Tip User SOL
+  // ======================================================================
+  describe("D. Tip User SOL", () => {
+    // Initialize user2 before running SOL tip tests
+    before(async () => {
+      // Initialize User 2 account for tipping target if it doesn't exist.
+      // This allows tests to be run multiple times without issues.
+      let user2AccountExists = true;
       try {
+        await program.account.userAccount.fetch(user2AccountPda);
+      } catch (e) {
+        user2AccountExists = false;
+      }
+
+      if (!user2AccountExists) {
         await program.methods
           .initializeUser()
           .accounts({
-            signer: signer.publicKey,
+            user: user2.publicKey,
+            userAccount: user2AccountPda,
+            systemProgram: SystemProgram.programId,
           })
+          .signers([user2])
           .rpc();
-
-        expect.fail("Should have thrown an error for duplicate initialization");
-      } catch (error) {
-        expect(error.toString()).to.include("already in use");
-        console.log("✅ Correctly prevented duplicate initialization");
       }
     });
 
-    it("Should create user accounts with correct PDA derivation", async () => {
+    it("1. tip_user_sol: Successfully tips SOL and updates receiver's state", async () => {
+      const tipAmount = 0.5 * LAMPORTS_PER_SOL;
+      const tipAmountBN = new BN(tipAmount);
 
-      const newUser = anchor.web3.Keypair.generate();
+      const user2AccountBefore = await program.account.userAccount.fetch(
+        user2AccountPda
+      );
+      const initialTotalSolTipped =
+        user2AccountBefore.totalSolTipped.toNumber();
 
-      const airdrop = await provider.connection.requestAirdrop(
-        newUser.publicKey,
-        2 * anchor.web3.LAMPORTS_PER_SOL
+      const user2BalanceBefore = BigInt(
+        (await connection.getAccountInfo(user2.publicKey))!.lamports.toString()
       );
 
-      const latestBlockhash = await provider.connection.getLatestBlockhash();
-
-      await provider.connection.confirmTransaction(
-        {
-          signature: airdrop,
-          blockhash: latestBlockhash.blockhash,
-          lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-        },
-        'confirmed'
-      );
-
-      // Derive PDA for the new user
-      const [userPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("user"), newUser.publicKey.toBuffer()],
-        program.programId
-      );
-
-      const tx = await program.methods
-        .initializeUser()
+      await program.methods
+        .tipUserSol(tipAmountBN)
         .accounts({
-          signer: newUser.publicKey,
+          tipper: user1.publicKey,
+          receiver: user2.publicKey,
+          receiverAccount: user2AccountPda,
+          systemProgram: SystemProgram.programId,
         })
-        .signers([newUser])
+        .signers([user1])
         .rpc();
 
-      console.log("New user transaction signature:", tx);
-
-      const userAccount = await program.account.user.fetch(userPda);
-      expect(userAccount.userPubkey.toString()).to.equal(
-        newUser.publicKey.toString()
+      // Verify SOL balance change on-chain
+      const user2BalanceAfter = BigInt(
+        (await connection.getAccountInfo(user2.publicKey))!.lamports.toString()
       );
 
-      console.log("✅ New user created with correct PDA derivation");
+      // Receiver's balance gain should be exactly tipAmount
+      assert.equal(
+        user2BalanceAfter - user2BalanceBefore,
+        BigInt(tipAmount),
+        "Receiver SOL balance did not increase exactly by tip amount"
+      );
+
+      // Verify UserAccount state update
+      const user2AccountAfter = await program.account.userAccount.fetch(
+        user2AccountPda
+      );
+      const expectedTotalSolTipped = initialTotalSolTipped + tipAmount;
+      assert.equal(
+        user2AccountAfter.totalSolTipped.toNumber(),
+        expectedTotalSolTipped,
+        "total_sol_tipped was not updated correctly"
+      );
+    });
+
+    it("2. tip_user_sol: Fails if tip amount is 0 (VoixError::InvalidTipAmount)", async () => {
+      await assert.rejects(
+        program.methods
+          .tipUserSol(new BN(0))
+          .accounts({
+            tipper: user1.publicKey,
+            receiver: user2.publicKey,
+            receiverAccount: user2AccountPda,
+            systemProgram: SystemProgram.programId,
+          })
+          .signers([user1])
+          .rpc(),
+        (e: unknown) => {
+          if (e instanceof anchor.AnchorError) {
+            return e.error.errorCode.code === "InvalidTipAmount";
+          }
+          if (typeof e === "object" && e !== null && "message" in e) {
+            return e.message.includes("InvalidTipAmount");
+          }
+          return false;
+        },
+        "Should have failed with VoixError::InvalidTipAmount"
+      );
     });
   });
 
-  describe("create_post", () => {
+  // ======================================================================
+  // E. Tip User SPL
+  // ======================================================================
+  describe("E. Tip User SPL", () => {
+    let mintKeypair: Keypair;
+    let mint: PublicKey;
+    let tipperTokenAccount: PublicKey;
+    let receiverTokenAccount: PublicKey;
+    const decimals = 6;
+    const tipAmount = new BN(100);
+    const initialSupply = new BN(10000);
 
-    it("Should create a post successfully", async () => {
-    const postId = new anchor.BN(1);
+    before(async () => {
+      // 1. Create a new token mint
+      mintKeypair = Keypair.generate();
+      mint = mintKeypair.publicKey;
 
-    // Derive the PDA for the post
-    const [postPda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("post"),
-        signer.publicKey.toBuffer(),
-        postId.toArrayLike(Buffer, "le", 8)
-      ],
-      program.programId
-    );
+      await createMint(
+        connection,
+        admin,
+        admin.publicKey,
+        null,
+        decimals,
+        mintKeypair,
+        null,
+        TOKEN_PROGRAM_ID
+      );
 
-    // Call create_post instruction
-    const tx = await program.methods
-      .createPost(postId)
-      .accounts({
-        creator: signer.publicKey,
-      })
-      .rpc();
+      // 2. Derive Associated Token Addresses
+      tipperTokenAccount = await getAssociatedTokenAddress(
+        mint,
+        user1.publicKey,
+        false,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
 
-    console.log("Create post transaction signature:", tx);
+      receiverTokenAccount = await getAssociatedTokenAddress(
+        mint,
+        user2.publicKey,
+        false,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
 
-    // Fetch the created post account
-    const postAccount = await program.account.post.fetch(postPda);
+      // 3. Create Tipper ATA
+      await provider.sendAndConfirm(
+        new anchor.web3.Transaction().add(
+          createAssociatedTokenAccountInstruction(
+            admin.publicKey, // Payer
+            tipperTokenAccount, // ATA Address (The PDA derived from user1/mint)
+            user1.publicKey, // Owner (The user who owns the ATA)
+            mint, // Mint
+            TOKEN_PROGRAM_ID, // SPL Token Program ID
+            ASSOCIATED_TOKEN_PROGRAM_ID // Associated Token Program ID
+          )
+        ),
+        [admin]
+      );
 
-    // Assertions
-    expect(postAccount.postId.toNumber()).to.equal(postId.toNumber());
-    expect(postAccount.creator.toString()).to.equal(signer.publicKey.toString());
-    expect(postAccount.createdAt.toNumber()).to.be.greaterThan(0);
-    expect(postAccount.totalTipAmount.toNumber()).to.equal(0);
+      // 4. Mint tokens to the tipper (user1)
+      await mintTo(
+        connection,
+        admin,
+        mint,
+        tipperTokenAccount,
+        admin.publicKey,
+        initialSupply.toNumber(),
+        [],
+        null,
+        TOKEN_PROGRAM_ID
+      );
+    });
 
-    console.log("✅ Post created:", {
-      postId: postAccount.postId.toNumber(),
-      creator: postAccount.creator.toString(),
-      createdAt: new Date(postAccount.createdAt.toNumber() * 1000).toISOString(),
-      totalTipAmount: postAccount.totalTipAmount.toNumber(),
+    it("1. tip_user_spl: Successfully tips SPL tokens and initializes receiver ATA (init_if_needed)", async () => {
+      // Fetch initial balances
+      const tipperTokenAccountInfoBefore = await getAccount(
+        connection,
+        tipperTokenAccount
+      );
+      const tipperBalanceBefore = BigInt(
+        tipperTokenAccountInfoBefore.amount.toString()
+      );
+
+      // Receiver ATA should not exist yet, verify init_if_needed works
+      let receiverAtaExistsBefore = true;
+      try {
+        await getAccount(connection, receiverTokenAccount);
+      } catch (e) {
+        receiverAtaExistsBefore = false;
+      }
+      assert.equal(
+        receiverAtaExistsBefore,
+        false,
+        "Receiver ATA should not exist yet"
+      );
+
+      // Execute the tip instruction
+      await program.methods
+        .tipUserSpl(tipAmount)
+        .accounts({
+          tipper: user1.publicKey,
+          receiver: user2.publicKey,
+          receiverAccount: user2AccountPda,
+          mint: mint,
+          tipperTokenAccount: tipperTokenAccount,
+          receiverTokenAccount: receiverTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([user1])
+        .rpc();
+
+      // 1. Verify Tipper's balance decreased
+      const tipperTokenAccountInfoAfter = await getAccount(
+        connection,
+        tipperTokenAccount
+      );
+      const tipperBalanceAfter = BigInt(
+        tipperTokenAccountInfoAfter.amount.toString()
+      );
+      const expectedTipperBalance =
+        tipperBalanceBefore - BigInt(tipAmount.toString());
+      assert.equal(
+        tipperBalanceAfter.toString(),
+        expectedTipperBalance.toString(),
+        "Tipper balance did not decrease correctly"
+      );
+
+      // 2. Verify Receiver's balance increased and ATA was created
+      const receiverTokenAccountInfoAfter = await getAccount(
+        connection,
+        receiverTokenAccount
+      );
+      const receiverBalanceAfter = BigInt(
+        receiverTokenAccountInfoAfter.amount.toString()
+      );
+      assert.ok(
+        receiverTokenAccountInfoAfter != null,
+        "Receiver ATA should have been initialized"
+      );
+      assert.equal(
+        receiverBalanceAfter.toString(),
+        tipAmount.toString(),
+        "Receiver balance did not increase correctly"
+      );
+    });
+
+    it("2. tip_user_spl: Handles subsequent tip to an existing ATA", async () => {
+      const secondTipAmount = new BN(50);
+
+      // Fetch current balances
+      const tipperTokenAccountInfoBefore = await getAccount(
+        connection,
+        tipperTokenAccount
+      );
+      const receiverTokenAccountInfoBefore = await getAccount(
+        connection,
+        receiverTokenAccount
+      );
+      const tipperBalanceBefore = BigInt(
+        tipperTokenAccountInfoBefore.amount.toString()
+      );
+      const receiverBalanceBefore = BigInt(
+        receiverTokenAccountInfoBefore.amount.toString()
+      );
+
+      // Execute the second tip instruction
+      await program.methods
+        .tipUserSpl(secondTipAmount)
+        .accounts({
+          tipper: user1.publicKey,
+          receiver: user2.publicKey,
+          receiverAccount: user2AccountPda,
+          mint: mint,
+          tipperTokenAccount: tipperTokenAccount,
+          receiverTokenAccount: receiverTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([user1])
+        .rpc();
+
+      // 1. Verify Tipper's balance decreased
+      const tipperTokenAccountInfoAfter = await getAccount(
+        connection,
+        tipperTokenAccount
+      );
+      const tipperBalanceAfter = BigInt(
+        tipperTokenAccountInfoAfter.amount.toString()
+      );
+      const expectedTipperBalance =
+        tipperBalanceBefore - BigInt(secondTipAmount.toString());
+      assert.equal(
+        tipperBalanceAfter.toString(),
+        expectedTipperBalance.toString(),
+        "Tipper balance did not decrease correctly after second tip"
+      );
+
+      // 2. Verify Receiver's balance increased
+      const receiverTokenAccountInfoAfter = await getAccount(
+        connection,
+        receiverTokenAccount
+      );
+      const receiverBalanceAfter = BigInt(
+        receiverTokenAccountInfoAfter.amount.toString()
+      );
+      const expectedReceiverBalance =
+        receiverBalanceBefore + BigInt(secondTipAmount.toString());
+      assert.equal(
+        receiverBalanceAfter.toString(),
+        expectedReceiverBalance.toString(),
+        "Receiver balance did not increase correctly after second tip"
+      );
+    });
+
+    it("3. tip_user_spl: Fails if tip amount is 0 (VoixError::InvalidTipAmount)", async () => {
+      await assert.rejects(
+        program.methods
+          .tipUserSpl(new BN(0))
+          .accounts({
+            tipper: user1.publicKey,
+            receiver: user2.publicKey,
+            receiverAccount: user2AccountPda,
+            mint: mint,
+            tipperTokenAccount: tipperTokenAccount,
+            receiverTokenAccount: receiverTokenAccount,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          })
+          .signers([user1])
+          .rpc(),
+        (e: unknown) => {
+          if (e instanceof anchor.AnchorError) {
+            return e.error.errorCode.code === "InvalidTipAmount";
+          }
+          if (typeof e === "object" && e !== null && "message" in e) {
+            return e.message.includes("InvalidTipAmount");
+          }
+          return false;
+        },
+        "Should have failed with VoixError::InvalidTipAmount"
+      );
     });
   });
 
+  // ======================================================================
+  // F. Mint Milestone NFT
+  // ======================================================================
+  describe("F. Mint Milestone NFT", () => {
+    // NFT metadata constants
+    const BRONZE_LEVEL = 1;
+    const SILVER_LEVEL = 2;
+    const GOLD_LEVEL = 3;
+    const NFT_NAME = "Voix Milestone";
+    const NFT_SYMBOL = "VOIX";
+    const NFT_URI = "https://voix.com/metadata/";
 
-  })
+    // Karma Requirements from programs/voix/src/constants.rs
+    const BRONZE_KARMA_REQ = 1000;
+    const SILVER_KARMA_REQ = 5000;
+    const GOLD_KARMA_REQ = 10000;
 
-  describe("tip_post", () => {
-    let postId: anchor.BN;
-    let postPda: PublicKey;
-    let creator: anchor.web3.Keypair;
-    let tipper: anchor.web3.Keypair;
+    // Milestone bit-flags from programs/voix/src/constants.rs
+    const BRONZE_FLAG = 1;
+    const SILVER_FLAG = 2;
+    const GOLD_FLAG = 4; // Added for clarity
 
-    beforeEach(async () => {
-      postId = new anchor.BN(Math.floor(Math.random() * 1000000));
-      creator = anchor.web3.Keypair.generate();
-      tipper = anchor.web3.Keypair.generate();
-
-      const creatorAirdropSig = await provider.connection.requestAirdrop(
-        creator.publicKey,
-        5 * anchor.web3.LAMPORTS_PER_SOL
-      );
-      const tipperAirdropSig = await provider.connection.requestAirdrop(
-        tipper.publicKey,
-        5 * anchor.web3.LAMPORTS_PER_SOL
-      );
-      const latestBlockhash = await provider.connection.getLatestBlockhash();
-
-      // Confirm both airdrops with new confirmation strategy
-      await provider.connection.confirmTransaction(
-        {
-          signature: creatorAirdropSig,
-          blockhash: latestBlockhash.blockhash,
-          lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-        },
-        'confirmed'
-      );
-
-      await provider.connection.confirmTransaction(
-        {
-          signature: tipperAirdropSig,
-          blockhash: latestBlockhash.blockhash,
-          lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-        },
-        'confirmed'
-      );
-
-      //creating the post
-      [postPda] = PublicKey.findProgramAddressSync(
+    // Helper to derive Metaplex PDA accounts
+    const getMetaplexPDAs = async (mint: PublicKey) => {
+      const [metadataAccount] = PublicKey.findProgramAddressSync(
         [
-          Buffer.from("post"),
-          creator.publicKey.toBuffer(),
-          postId.toArrayLike(Buffer, "le", 8)
+          Buffer.from("metadata"),
+          MPL_TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+          mint.toBuffer(),
         ],
-        program.programId
+        MPL_TOKEN_METADATA_PROGRAM_ID
       );
 
+      const [masterEditionAccount] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("metadata"),
+          MPL_TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+          mint.toBuffer(),
+          Buffer.from("edition"),
+        ],
+        MPL_TOKEN_METADATA_PROGRAM_ID
+      );
+
+      return { metadataAccount, masterEditionAccount };
+    };
+
+    it("1. mint_milestone_nft: Fails if user has Insufficient Karma (User 2, Bronze)", async () => {
+      // Set User 2 Karma back to a value < 1000 to test InsufficientKarma
       await program.methods
-        .createPost(postId)
+        .updateUserKarma(0)
         .accounts({
-          creator: creator.publicKey,
+          admin: admin.publicKey,
+          globalConfig: globalConfigPda,
+          userAccount: user2AccountPda,
+          userToUpdate: user2.publicKey,
         })
-        .signers([creator])
+        .signers([admin])
         .rpc();
-    });
 
+      const mintKeypair = Keypair.generate();
+      const mint = mintKeypair.publicKey;
 
-
-    it("Should tip a post successfully", async () => {
-    const tipAmount = new anchor.BN(1000000);
-
-    // initial balances
-    const creatorBalanceBefore = await provider.connection.getBalance(creator.publicKey);
-    const postAccountBefore = await program.account.post.fetch(postPda);
-
-    // tipping the post
-    const tx = await program.methods
-      .tipPost(tipAmount)
-      .accounts({
-        post: postPda,
-        tipper: tipper.publicKey,
-        creator: creator.publicKey,
-      })
-      .signers([tipper])
-      .rpc();
-
-    console.log("Tip post transaction signature:", tx);
-
-    // Get final balances
-    const creatorBalanceAfter = await provider.connection.getBalance(creator.publicKey);
-    const postAccountAfter = await program.account.post.fetch(postPda);
-
-    // Assertions
-    expect(creatorBalanceAfter).to.equal(creatorBalanceBefore + tipAmount.toNumber());
-    expect(postAccountAfter.totalTipAmount.toNumber()).to.equal(
-      postAccountBefore.totalTipAmount.toNumber() + tipAmount.toNumber()
-    );
-
-    console.log("✅ Post tipped successfully:", {
-      tipAmount: tipAmount.toNumber(),
-      creatorBalanceIncrease: creatorBalanceAfter - creatorBalanceBefore,
-      totalTipAmount: postAccountAfter.totalTipAmount.toNumber(),
-    });
-    });
-
-    it("Should allow different tippers to tip to same post", async () => {
-      const tipper2 = anchor.web3.Keypair.generate();
-
-      const airdrop = await provider.connection.requestAirdrop(
-        tipper2.publicKey,
-        2 * anchor.web3.LAMPORTS_PER_SOL
+      const { metadataAccount, masterEditionAccount } = await getMetaplexPDAs(
+        mint
       );
-      //todo to latest transacdtion verfication
-      const latestBlockhash = await provider.connection.getLatestBlockhash();
+      const tokenAccount = await getAssociatedTokenAddress(
+        mint,
+        user2.publicKey
+      );
 
-      await provider.connection.confirmTransaction(
-        {
-          signature: airdrop,
-          blockhash: latestBlockhash.blockhash,
-          lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+      await assert.rejects(
+        program.methods
+          .mintMilestoneNft(
+            BRONZE_LEVEL,
+            `${NFT_NAME} Bronze`,
+            NFT_SYMBOL,
+            `${NFT_URI}bronze`
+          )
+          .accounts({
+            user: user2.publicKey,
+            userAccount: user2AccountPda,
+            mintAuthority: mintAuthorityPda,
+            mint: mint,
+            tokenAccount: tokenAccount,
+            metadataAccount: metadataAccount,
+            masterEditionAccount: masterEditionAccount,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+            rent: anchor.web3.SYSVAR_RENT_PUBKEY, // Rent sysvar
+            tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+          })
+          .signers([user2, mintKeypair])
+          .rpc(), 
+        (e: anchor.AnchorError) => {
+          return e.error.errorCode.code === "InsufficientKarma";
         },
-        'confirmed'
+        "Should have failed with VoixError::InsufficientKarma"
+      );
+    });
+
+    it("2. mint_milestone_nft: Fails with Invalid Milestone Level", async () => {
+      const mintKeypair = Keypair.generate();
+      const mint = mintKeypair.publicKey;
+
+      const { metadataAccount, masterEditionAccount } = await getMetaplexPDAs(
+        mint
+      );
+      const tokenAccount = await getAssociatedTokenAddress(
+        mint,
+        user2.publicKey
+      );
+      const invalidLevel = 99; // Invalid level
+
+      await assert.rejects(
+        program.methods
+          .mintMilestoneNft(
+            invalidLevel,
+            `${NFT_NAME} Invalid`,
+            NFT_SYMBOL,
+            `${NFT_URI}invalid`
+          )
+          .accounts({
+            user: user2.publicKey,
+            userAccount: user2AccountPda,
+            mintAuthority: mintAuthorityPda,
+            mint: mint,
+            tokenAccount: tokenAccount,
+            metadataAccount: metadataAccount,
+            masterEditionAccount: masterEditionAccount,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+            tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+          })
+          .signers([user2, mintKeypair])
+          .rpc(), 
+        (e: anchor.AnchorError) => {
+          return e.error.errorCode.code === "InvalidMilestoneLevel";
+        },
+        "Should have failed with VoixError::InvalidMilestoneLevel"
+      );
+    });
+
+    it("3. mint_milestone_nft: User 2 successfully mints Bronze NFT after karma update", async () => {
+      // 1. Update User 2 Karma to meet Bronze requirement
+      const bronzeKarma = BRONZE_KARMA_REQ;
+      await program.methods
+        .updateUserKarma(bronzeKarma)
+        .accounts({
+          admin: admin.publicKey,
+          globalConfig: globalConfigPda,
+          userAccount: user2AccountPda,
+          userToUpdate: user2.publicKey,
+        })
+        .signers([admin])
+        .rpc();
+
+      // 2. Prepare accounts and mint
+      const mintKeypair = Keypair.generate();
+      const mint = mintKeypair.publicKey;
+      const { metadataAccount, masterEditionAccount } = await getMetaplexPDAs(
+        mint
+      );
+      const tokenAccount = await getAssociatedTokenAddress(
+        mint,
+        user2.publicKey
       );
 
-      const tip1 = new anchor.BN(50000);
-      const tip2 = new anchor.BN(60000);
-
       await program.methods
-      .tipPost(tip1)
-      .accounts({
-        post: postPda,
-        tipper: tipper.publicKey,
-        creator: creator.publicKey,
-      })
-      .signers([tipper])
-      .rpc();
+        .mintMilestoneNft(
+          BRONZE_LEVEL,
+          `${NFT_NAME} Bronze`,
+          NFT_SYMBOL,
+          `${NFT_URI}bronze`
+        )
+        .accounts({
+          user: user2.publicKey,
+          userAccount: user2AccountPda,
+          mintAuthority: mintAuthorityPda,
+          mint: mint,
+          tokenAccount: tokenAccount,
+          metadataAccount: metadataAccount,
+          masterEditionAccount: masterEditionAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+        })
+        .signers([user2, mintKeypair])
+        .rpc(); 
 
-    // Second tipper tips
-    await program.methods
-      .tipPost(tip2)
-      .accounts({
-        post: postPda,
-        tipper: tipper2.publicKey,
-        creator: creator.publicKey,
-      })
-      .signers([tipper2])
-      .rpc();
-
-      const postAccount = await program.account.post.fetch(postPda);
-      expect(postAccount.totalTipAmount.toNumber()).to.equal(
-      tip1.toNumber() + tip2.toNumber()
+      // 3. Verify state changes
+      // a. Check token balance
+      const tokenAccountInfo = await getAccount(connection, tokenAccount);
+      assert.equal(
+        tokenAccountInfo.amount.toString(),
+        "1",
+        "User should own 1 NFT token"
       );
-      console.log("✅ Multiple tippers can tip the same post");
-    })
-  })
 
-  describe("update_karma_milestones", () => {
-  let testUser: anchor.web3.Keypair;
-  let userPda: PublicKey;
-  let authority: anchor.web3.Keypair;
-
-  beforeEach(async () => {
-    // Create a new user for each test
-    testUser = anchor.web3.Keypair.generate();
-
-    const userAirdrop = await provider.connection.requestAirdrop(
-      testUser.publicKey,
-      2 * anchor.web3.LAMPORTS_PER_SOL
-    );
-
-
-    const latestBlockhash = await provider.connection.getLatestBlockhash();
-
-    await provider.connection.confirmTransaction(
-      {
-        signature: userAirdrop,
-        blockhash: latestBlockhash.blockhash,
-        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-      },
-      'confirmed'
-    );
-
-
-    // Derive user PDA
-    [userPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("user"), testUser.publicKey.toBuffer()],
-      program.programId
-    );
-
-    await program.methods
-      .initializeUser()
-      .accounts({
-        signer: testUser.publicKey,
-      })
-      .signers([testUser])
-      .rpc();
-  });
-
-  it("Should update milestone when user reaches 1000 karma (Bronze)", async () => {
-    // Initially, user has no milestones
-    let userAccount = await program.account.user.fetch(userPda);
-    expect(userAccount.karmaMilestones).to.be.an("array").that.is.empty;
-
-    //  reaches 1000 karma - backend calls update with Bronze milestone
-    const bronzeMilestone = [1000];
-
-    const tx = await program.methods
-      .updateKarmaMilestones(bronzeMilestone)
-      .accounts({
-        authority: testUser.publicKey,
-      })
-      .signers([testUser])
-      .rpc();
-
-    console.log("Update to Bronze milestone transaction signature:", tx);
-
-    userAccount = await program.account.user.fetch(userPda);
-
-    expect(userAccount.karmaMilestones).to.have.lengthOf(1);
-    expect(userAccount.karmaMilestones[0]).to.equal(1000);
-
-    console.log("✅ User reached 1000 karma (Bronze milestone) and it is updated:", {
-      userPubkey: userAccount.userPubkey.toString(),
-      karmaMilestones: userAccount.karmaMilestones,
+      // b. Check user account milestones
+      const userAccountAfterMint = await program.account.userAccount.fetch(
+        user2AccountPda
+      );
+      assert.equal(
+        userAccountAfterMint.mintedMilestones,
+        BRONZE_FLAG,
+        "Bronze flag should be set (value 1)"
+      );
     });
-  });
 
-  it("Should not have milestone before reaching 1000 karma", async () => {
-    // User has not reached 1000 karma
-    const userAccount = await program.account.user.fetch(userPda);
+    it("4. mint_milestone_nft: Fails to re-mint the Bronze NFT (MilestoneAlreadyMinted)", async () => {
+      await program.methods
+        .updateUserKarma(BRONZE_KARMA_REQ)
+        .accounts({
+          admin: admin.publicKey,
+          globalConfig: globalConfigPda,
+          userAccount: user2AccountPda,
+          userToUpdate: user2.publicKey,
+        })
+        .signers([admin])
+        .rpc();
 
-    expect(userAccount.karmaMilestones).to.be.an("array").that.is.empty;
+      const mintKeypair = Keypair.generate(); // Need a new mint to simulate re-mint attempt
+      const mint = mintKeypair.publicKey;
 
-    console.log("✅ User below 1000 karma has no milestones");
-  });
+      const { metadataAccount, masterEditionAccount } = await getMetaplexPDAs(
+        mint
+      );
+      const tokenAccount = await getAssociatedTokenAddress(
+        mint,
+        user2.publicKey
+      );
 
+      // We rely on the PDA persistence from Test 3's successful state update.
+      await assert.rejects(
+        program.methods
+          .mintMilestoneNft(
+            BRONZE_LEVEL,
+            `${NFT_NAME} Bronze Duplicate`,
+            NFT_SYMBOL,
+            `${NFT_URI}bronze_dup`
+          )
+          .accounts({
+            user: user2.publicKey,
+            userAccount: user2AccountPda,
+            mintAuthority: mintAuthorityPda,
+            mint: mint,
+            tokenAccount: tokenAccount,
+            metadataAccount: metadataAccount,
+            masterEditionAccount: masterEditionAccount,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+            tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+          })
+          .signers([user2, mintKeypair])
+          .rpc(), 
+        (e: anchor.AnchorError) => {
+          return e.error.errorCode.code === "MilestoneAlreadyMinted";
+        },
+        "Should have failed with VoixError::MilestoneAlreadyMinted"
+      );
+    });
 
-    it("Should update milestones progressively", async () => {
+    it("5. mint_milestone_nft: User 2 successfully mints Silver NFT after karma update", async () => {
+      // 1. Update User 2 Karma to meet Silver requirement
+      const silverKarma = SILVER_KARMA_REQ;
+      await program.methods
+        .updateUserKarma(silverKarma)
+        .accounts({
+          admin: admin.publicKey,
+          globalConfig: globalConfigPda,
+          userAccount: user2AccountPda,
+          userToUpdate: user2.publicKey,
+        })
+        .signers([admin])
+        .rpc();
 
-      let userAccount = await program.account.user.fetch(userPda);
-      expect(userAccount.karmaMilestones).to.be.an("array").that.is.empty;
+      
+      // 3. Prepare accounts and mint Silver
+      const mintKeypair = Keypair.generate();
+      const mint = mintKeypair.publicKey;
+      const { metadataAccount, masterEditionAccount } = await getMetaplexPDAs(
+        mint
+      );
+      const tokenAccount = await getAssociatedTokenAddress(
+        mint,
+        user2.publicKey
+      );
 
       await program.methods
-        .updateKarmaMilestones([1000])
+        .mintMilestoneNft(
+          SILVER_LEVEL,
+          `${NFT_NAME} Silver`,
+          NFT_SYMBOL,
+          `${NFT_URI}silver`
+        )
         .accounts({
-          authority: testUser.publicKey,
+          user: user2.publicKey,
+          userAccount: user2AccountPda,
+          mintAuthority: mintAuthorityPda,
+          mint: mint,
+          tokenAccount: tokenAccount,
+          metadataAccount: metadataAccount,
+          masterEditionAccount: masterEditionAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
         })
-        .signers([testUser])
+        .signers([user2, mintKeypair])
+        .rpc(); 
+      // 4. Verify state changes
+      const userAccountAfterMint = await program.account.userAccount.fetch(
+        user2AccountPda
+      );
+      const expectedFlags = BRONZE_FLAG | SILVER_FLAG; // 1 | 2 = 3
+      assert.equal(
+        userAccountAfterMint.mintedMilestones,
+        expectedFlags,
+        "Milestone flags should be Bronze and Silver (value 3)"
+      );
+    });
+
+    it("6. mint_milestone_nft: User 2 successfully mints Gold NFT after karma update", async () => {
+      // 1. Update User 2 Karma to meet Gold requirement
+      const goldKarma = GOLD_KARMA_REQ;
+      await program.methods
+        .updateUserKarma(goldKarma)
+        .accounts({
+          admin: admin.publicKey,
+          globalConfig: globalConfigPda,
+          userAccount: user2AccountPda,
+          userToUpdate: user2.publicKey,
+        })
+        .signers([admin])
         .rpc();
 
-      userAccount = await program.account.user.fetch(userPda);
-      expect(userAccount.karmaMilestones).to.deep.equal([1000]);
-
-      console.log("✅ User reached Bronze milestone (1000 karma):", {
-        userPubkey: userAccount.userPubkey.toString(),
-        allMilestones: userAccount.karmaMilestones,
-        hasAllMilestones: userAccount.karmaMilestones.length === 1,
-        currentLevel: "Bronze",
-      });
+      
+      // 3. Prepare accounts and mint Gold
+      const mintKeypair = Keypair.generate();
+      const mint = mintKeypair.publicKey;
+      const { metadataAccount, masterEditionAccount } = await getMetaplexPDAs(
+        mint
+      );
+      const tokenAccount = await getAssociatedTokenAddress(
+        mint,
+        user2.publicKey
+      );
 
       await program.methods
-      .updateKarmaMilestones([1000, 5000])
-      .accounts({
-        authority: testUser.publicKey,
-      })
-      .signers([testUser])
-        .rpc();
-
-      userAccount = await program.account.user.fetch(userPda);
-      expect(userAccount.karmaMilestones).to.deep.equal([1000, 5000]);
-
-        console.log("✅ User reached Silver milestone (5000 karma):", {
-          userPubkey: userAccount.userPubkey.toString(),
-          allMilestones: userAccount.karmaMilestones,
-          hasAllMilestones: userAccount.karmaMilestones.length === 2,
-          currentLevel: "Silver",
-        });
-
-
-      const tx = await program.methods
-        .updateKarmaMilestones([1000, 5000, 10000])
+        .mintMilestoneNft(
+          GOLD_LEVEL,
+          `${NFT_NAME} Gold`,
+          NFT_SYMBOL,
+          `${NFT_URI}gold`
+        )
         .accounts({
-          authority: testUser.publicKey,
+          user: user2.publicKey,
+          userAccount: user2AccountPda,
+          mintAuthority: mintAuthorityPda,
+          mint: mint,
+          tokenAccount: tokenAccount,
+          metadataAccount: metadataAccount,
+          masterEditionAccount: masterEditionAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
         })
-        .signers([testUser])
-        .rpc();
+        .signers([user2, mintKeypair])
+        .rpc(); 
 
-      console.log("Update to Gold milestone transaction signature:", tx);
-
-
-      userAccount = await program.account.user.fetch(userPda);
-
-    expect(userAccount.karmaMilestones).to.have.lengthOf(3);
-    expect(userAccount.karmaMilestones).to.deep.equal([1000, 5000, 10000]);
-
-    console.log("✅ User reached final milestone (Gold - 10000 karma):", {
-      userPubkey: userAccount.userPubkey.toString(),
-      allMilestones: userAccount.karmaMilestones,
-      hasAllMilestones: userAccount.karmaMilestones.length === 3,
+      // 4. Verify state changes
+      const userAccountAfterMint = await program.account.userAccount.fetch(
+        user2AccountPda
+      );
+      // We assert that the Gold flag (4) is set, in addition to the Bronze(1) and Silver(2) flags.
+      const expectedFlags = BRONZE_FLAG | SILVER_FLAG | GOLD_FLAG; // 1 | 2 | 4 = 7
+      assert.equal(
+        userAccountAfterMint.mintedMilestones,
+        expectedFlags,
+        "Milestone flags should be Bronze, Silver, and Gold (value 7)"
+      );
     });
-  })
-
-});
+  });
 });
