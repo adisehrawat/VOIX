@@ -1,5 +1,6 @@
 import { id } from "zod/v4/locales"
 import { prisma } from "../Singelton/index"
+import { KarmaService } from "./KarmaService"
 
 import jwt from "jsonwebtoken"
 
@@ -234,6 +235,37 @@ export class Authservice {
         return users ; 
     }
 
+    static async getUserbyid2(userid : string){
+        const user = await prisma.user.findUnique({
+            where : {
+                id : userid
+            }
+        })
+        return user ; 
+    }
+
+    static async CreateKarma(userid : string){
+        const karma = await prisma.karma.create({
+            data: {
+                userid: userid,
+                points: "0",
+                nfts: 0
+            }
+        })
+        return karma.userid;
+    }
+
+    static async UpdateKarma(userid : string, points : string){
+        const karma = await prisma.karma.update({
+            where: {
+                userid: userid
+            },
+            data: {
+                points: points
+            }
+        })
+        return karma.userid;
+    }
 
 
 }

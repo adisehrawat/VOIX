@@ -139,10 +139,11 @@ describe("voix: Contract Tests (Comprehensive Suite)", () => {
         .initializeUser()
         .accounts({
           user: user1.publicKey,
+          admin : admin.publicKey,
           userAccount: user1AccountPda,
           systemProgram: SystemProgram.programId,
         })
-        .signers([user1])
+        .signers([admin])
         .rpc();
 
       const userAccount = await program.account.userAccount.fetch(
@@ -330,10 +331,11 @@ describe("voix: Contract Tests (Comprehensive Suite)", () => {
           .initializeUser()
           .accounts({
             user: user2.publicKey,
+            admin : admin.publicKey , 
             userAccount: user2AccountPda,
             systemProgram: SystemProgram.programId,
           })
-          .signers([user2])
+          .signers([admin])
           .rpc();
       }
     });

@@ -1,15 +1,19 @@
 import { Authservice } from "../Services/AuthService";
 import  {privy}  from "../Singelton/index"
-
+import { VoixContract } from "../Services/Smartcontrac";
+import { PublicKey } from "@solana/web3.js";
 export async function CreateUserPassword(name : string , email : string , password : string , imageUrl : string | undefined){
 
 
     const {id, address} = await privy.wallets().create({chain_type: 'solana'});
 
-    
     const data = await Authservice.CreateUser(name  , email , password , imageUrl?imageUrl : null , "Password" , id , address)
 
-    return Authservice.EncodeUser(data.email , data.id)
+    const userid = await Authservice.CreateKarma(data.id)
+
+    await VoixContract.Set_new_karma(new PublicKey(address) , 0)
+    await VoixContract.Intialize_user(new PublicKey(address))
+    return Authservice.EncodeUser(data.email , userid)
 
 }
 

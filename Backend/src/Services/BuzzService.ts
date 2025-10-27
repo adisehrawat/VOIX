@@ -1,5 +1,6 @@
 import { addAbortListener } from "events";
 import { prisma } from "../Singelton/index"
+import { KarmaService } from "./KarmaService"
 
 export class BuzzService {
 
@@ -55,6 +56,16 @@ export class BuzzService {
             }
         })
 
+        // Get the buzz owner to award karma
+        const buzz = await prisma.buzz.findUnique({
+            where: { id: postid },
+            select: { userid: true }
+        });
+
+        if (!buzz) {
+            throw new Error("Buzz not found");
+        }
+
         if (fdata == null) {
             const data = await prisma.vote.create({
                 data: {
@@ -63,9 +74,18 @@ export class BuzzService {
                     type: vote_type
                 }
             })
+
+            // Award karma for upvote (+1 point)
+            if (vote_type === "UpVote") {
+                await KarmaService.handleUpvoteKarma(buzz.userid);
+            }
+
             return data.id
         }
 
+        // Handle vote change
+        const previousVoteType = fdata.type;
+        
         await prisma.vote.update({
             where: {
                 userid_postid: {
@@ -78,10 +98,35 @@ export class BuzzService {
             }
         })
 
+        // Handle karma changes based on vote type changes
+        if (previousVoteType === "DownVote" && vote_type === "UpVote") {
+            // Changed from downvote to upvote: add 1 point
+            await KarmaService.addKarma(buzz.userid, 1);
+        } else if (previousVoteType === "UpVote" && vote_type === "DownVote") {
+            // Changed from upvote to downvote: subtract 1 point
+            await KarmaService.addKarma(buzz.userid, -1);
+        }
+
         return fdata.id
     }
 
     static async DelteVote(userid : string , postid : string)  {
+
+        // Get the vote to check its type before deletion
+        const vote = await prisma.vote.findUnique({
+            where: {
+                userid_postid: {
+                    userid: userid,
+                    postid: postid
+                }
+            }
+        });
+
+        // Get the buzz owner to adjust karma
+        const buzz = await prisma.buzz.findUnique({
+            where: { id: postid },
+            select: { userid: true }
+        });
 
         const res = await prisma.vote.delete({
             where : {
@@ -92,6 +137,11 @@ export class BuzzService {
             }
         })
 
+        // If the deleted vote was an upvote, subtract 1 karma point
+        if (vote && vote.type === "UpVote" && buzz) {
+            await KarmaService.addKarma(buzz.userid, -1);
+        }
+
         return res ; 
     }
 
@@ -101,7 +151,7 @@ export class BuzzService {
             take: 10,
             include: {
                 user: {
-                    select: { Name: true, ImageUrl: true, email: true }
+                    select: { Name: true, ImageUrl: true, email: true , public_key : true }
                 },
                 Vote: {
                     select: { userid: true }

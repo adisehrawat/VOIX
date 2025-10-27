@@ -12,11 +12,11 @@ voix = "DgCkfcZY1GJkLZd5htKob4XDorcpmnP9UP4f6kXo8Up7"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
-wallet = "~/.config/solana/id.json"
+cluster = "devnet"
+wallet = "./admin_key.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 10000000 tests/**/*.ts"
 [test.validator]
 url = "https://api.mainnet-beta.solana.com"
 

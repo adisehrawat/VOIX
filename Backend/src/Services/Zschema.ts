@@ -1,4 +1,4 @@
-import {  z } from "zod"
+import { z } from "zod"
 
 export const SignupSchema = z.object({
   email: z.email(),
@@ -75,34 +75,57 @@ export const ApprovedFriendRequest = z.object({
     id: z.string()
   }),
 
-  senderid : z.string() 
+  senderid: z.string()
 })
 
 export const RemoveFriendRequser = z.object({
-  user : z.object({
-    email : z.string() , 
-    id : z.string() 
+  user: z.object({
+    email: z.string(),
+    id: z.string()
   }),
-  friendid : z.string() 
+  friendid: z.string()
 
 
 })
 
 export const AddLocationSchema = z.object({
-    user : z.object({
-    email : z.string() , 
-    id : z.string() 
+  user: z.object({
+    email: z.string(),
+    id: z.string()
   }),
-  longitude : z.string() , 
-  latitude : z.string()
+  longitude: z.string(),
+  latitude: z.string()
 })
 
 
 export const UpdateLocation = z.object({
-      user : z.object({
-    email : z.string() , 
-    id : z.string() 
+  user: z.object({
+    email: z.string(),
+    id: z.string()
   }),
-  longitude : z.string() , 
-  latitude : z.string()
+  longitude: z.string(),
+  latitude: z.string()
+})
+
+
+export const TipBuzz = z.object({
+  user: z.object({
+    email: z.string(),
+    id: z.string()
+  }),
+  amount: z.number(),
+  buzzid: z.string(),
+  Symbol: z.string(),
+  reciverPubkey: z.string().min(32)
+})
+
+
+export const TipUser = z.object({
+  user: z.object({
+    email: z.string(),
+    id: z.string()
+  }),
+  amount: z.number(),
+  Symbol: z.string(),
+  reciverPubkey: z.string().min(32)
 })

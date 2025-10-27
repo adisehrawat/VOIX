@@ -6,17 +6,17 @@ use anchor_lang::prelude::*;
 #[derive(Accounts)]
 pub struct InitializeUser<'info> {
     #[account(mut)]
-    pub user: Signer<'info>,
-
+    pub admin : Signer<'info> , 
+    #[account(mut)]
+    pub user: SystemAccount<'info>,
     #[account(
         init,
-        payer = user,
+        payer = admin,
         space = 8 + UserAccount::INIT_SPACE,
         seeds = [USER_SEED, user.key().as_ref()],
         bump
     )]
     pub user_account: Account<'info, UserAccount>,
-
     pub system_program: Program<'info, System>,
 }
 

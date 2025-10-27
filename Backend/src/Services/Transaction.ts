@@ -1,4 +1,5 @@
 import { prisma } from "../Singelton";
+import { KarmaService } from "./KarmaService";
 
 
 export class TransactionService {
@@ -25,6 +26,16 @@ export class TransactionService {
 
 
     static async Creattip(senderid : string , buzzid : string , amount : string , symbol : string ){
+        // Get the buzz owner to award karma
+        const buzz = await prisma.buzz.findUnique({
+            where: { id: buzzid },
+            select: { userid: true }
+        });
+
+        if (!buzz) {
+            throw new Error("Buzz not found");
+        }
+
         const data = await prisma.tip.create({
             data : {
                 symbol : symbol , 
@@ -33,6 +44,9 @@ export class TransactionService {
                 amount : amount
             }
         })
+
+        // Award karma for tip (+5 points)
+        await KarmaService.handleTipKarma(buzz.userid);
 
         return data.id
     }

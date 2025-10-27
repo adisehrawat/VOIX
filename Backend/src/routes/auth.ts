@@ -4,6 +4,7 @@ import { CreateUserPassword, Loginuser } from "../handlers/auth";
 import { AuthMiddleware } from "../middlewares";
 import { AddLocationSchema, UpdateLocation } from "../Services/Zschema";
 import { Authservice } from "../Services/AuthService";
+import { VoixContract } from "../Services/Smartcontrac";
 
 export const authrouter = express.Router();
 
