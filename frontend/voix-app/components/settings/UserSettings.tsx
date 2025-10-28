@@ -1,5 +1,7 @@
-import { Bell, Globe, Lock, Moon, Settings, User as UserIcon } from 'lucide-react-native';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Coins, Globe, LogOut, Settings, User as UserIcon, Wallet, Zap } from 'lucide-react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { router } from 'expo-router';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface SettingsOption {
   id: string;
@@ -15,6 +17,26 @@ interface UserSettingsProps {
 }
 
 export default function UserSettings({ onNavigate }: UserSettingsProps) {
+  const { signOut } = useAuth();
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: signOut,
+        },
+      ],
+    );
+  };
+
   const settingsOptions: SettingsOption[] = [
     {
       id: 'profile',
@@ -25,14 +47,6 @@ export default function UserSettings({ onNavigate }: UserSettingsProps) {
       onPress: () => onNavigate('edit-profile'),
     },
     {
-      id: 'privacy',
-      title: 'Privacy Settings',
-      description: 'Control your privacy preferences',
-      icon: Lock,
-      color: '#a855f7',
-      onPress: () => onNavigate('privacy'),
-    },
-    {
       id: 'location',
       title: 'Location Settings',
       description: 'Manage location preferences',
@@ -41,28 +55,28 @@ export default function UserSettings({ onNavigate }: UserSettingsProps) {
       onPress: () => onNavigate('location'),
     },
     {
-      id: 'notifications',
-      title: 'Notifications',
-      description: 'Manage notification preferences',
-      icon: Bell,
+      id: 'wallet',
+      title: 'Wallet',
+      description: 'View balance and transactions',
+      icon: Wallet,
+      color: '#10b981',
+      onPress: () => router.push('/wallet'),
+    },
+    {
+      id: 'karma',
+      title: 'Karma',
+      description: 'View karma points and leaderboard',
+      icon: Zap,
+      color: '#a855f7',
+      onPress: () => router.push('/karma'),
+    },
+    {
+      id: 'tips',
+      title: 'Tips',
+      description: 'View tip history and analytics',
+      icon: Coins,
       color: '#f97316',
-      onPress: () => onNavigate('notifications'),
-    },
-    {
-      id: 'appearance',
-      title: 'Appearance',
-      description: 'Theme and display settings',
-      icon: Moon,
-      color: '#eab308',
-      onPress: () => onNavigate('appearance'),
-    },
-    {
-      id: 'account',
-      title: 'Account Management',
-      description: 'Security and account settings',
-      icon: Settings,
-      color: '#ef4444',
-      onPress: () => onNavigate('account'),
+      onPress: () => router.push('/tips'),
     },
   ];
 
@@ -109,6 +123,25 @@ export default function UserSettings({ onNavigate }: UserSettingsProps) {
             </TouchableOpacity>
           );
         })}
+
+        {/* Sign Out Button */}
+        <TouchableOpacity
+          onPress={handleSignOut}
+          className="bg-zinc-900 rounded-2xl p-4 mb-3 border border-red-800 flex-row items-center"
+          activeOpacity={0.8}
+        >
+          <View className="w-12 h-12 rounded-full items-center justify-center mr-3 bg-red-500/20">
+            <LogOut size={24} color="#ef4444" strokeWidth={2} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-red-500 font-semibold text-base">
+              Sign Out
+            </Text>
+            <Text className="text-red-400 text-sm">
+              Logout from your account
+            </Text>
+          </View>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );

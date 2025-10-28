@@ -12,7 +12,7 @@ use events::*;
 use instructions::*;
 use state::*;
 
-declare_id!("DgCkfcZY1GJkLZd5htKob4XDorcpmnP9UP4f6kXo8Up7");
+declare_id!("41ixdTNskpBiezYZyjigB5k3MTgdv3CcFHYFuVPy3mbK");
 
 #[program]
 pub mod voix {

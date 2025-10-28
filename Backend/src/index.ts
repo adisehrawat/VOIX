@@ -1,15 +1,23 @@
 import express from "express"
 import dotenv from "dotenv"
+import cors from "cors"
 import   {authrouter} from "./routes/auth"
 import { buzzrouter } from "./routes/buzz";
 import { friendrouter } from "./routes/friend";
 import { tiprouter } from "./routes/tip";
 import { karmarouter } from "./routes/karma";
+import { walletRouter } from "./routes/wallet";
+import { searchrouter } from "./routes/search";
 
 dotenv.config() ; 
 
 const app = express() ; 
 const PORT = process.env.PORT
+
+// Enable CORS for all origins (for development)
+app.use(cors())
+
+// Parse JSON bodies
 app.use(express.json())
 
 
@@ -21,6 +29,8 @@ app.use("/api/v1/buzz"  , buzzrouter)
 app.use("/api/v1/friends"  , friendrouter)
 app.use("/api/v1/tip"  ,  tiprouter)
 app.use("/api/v1/karma"  ,  karmarouter)
+app.use("/api/v1/wallet"  ,  walletRouter)
+app.use("/api/v1/search"  ,  searchrouter)
 
 app.get("/health"  ,   (req, res)=>{
 

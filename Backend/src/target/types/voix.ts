@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/voix.json`.
  */
 export type Voix = {
-  "address": "DgCkfcZY1GJkLZd5htKob4XDorcpmnP9UP4f6kXo8Up7",
+  "address": "41ixdTNskpBiezYZyjigB5k3MTgdv3CcFHYFuVPy3mbK",
   "metadata": {
     "name": "voix",
     "version": "0.1.0",

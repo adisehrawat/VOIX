@@ -6,12 +6,13 @@ export default function AuthLayout() {
       headerShown: false,
       contentStyle: { backgroundColor: '#000000' }
     }}>
+        <Stack.Screen
+        name='sign-up'
+      />
       <Stack.Screen
         name='sign-in'
       />
-      <Stack.Screen
-        name='sign-up'
-      />
+      
     </Stack>
   );
 }

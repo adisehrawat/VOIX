@@ -22,6 +22,13 @@ export default function TransactionCard({ transaction, currentUserId }: Transact
   const otherUser = isSent ? transaction.receiver : transaction.sender;
   const isPositive = !isSent;
 
+  // Handle both lowercase (imageUrl, name) and capitalized (ImageUrl, Name) formats
+  const otherUserImage = (otherUser as any)?.ImageUrl || otherUser.imageUrl || 'https://i.pravatar.cc/150?img=1';
+  const otherUserName = (otherUser as any)?.Name || otherUser.name || 'Unknown';
+  const transactionDate = typeof transaction.createdAt === 'string' 
+    ? new Date(transaction.createdAt) 
+    : transaction.createdAt;
+
   return (
     <View className="bg-zinc-900 rounded-2xl p-4 mb-3 border border-zinc-800">
       <View className="flex-row items-center">
@@ -41,12 +48,12 @@ export default function TransactionCard({ transaction, currentUserId }: Transact
         {/* User Info */}
         <View className="flex-1 flex-row items-center">
           <Image
-            source={{ uri: otherUser.imageUrl }}
+            source={{ uri: otherUserImage }}
             className="w-10 h-10 rounded-full mr-3"
           />
           <View className="flex-1">
             <Text className="text-white font-semibold text-base">
-              {isSent ? 'Sent to' : 'Received from'} {otherUser.name}
+              {isSent ? 'Sent to' : 'Received from'} {otherUserName}
             </Text>
             <View className="flex-row items-center mt-1">
               <View
@@ -63,7 +70,7 @@ export default function TransactionCard({ transaction, currentUserId }: Transact
                 </Text>
               </View>
               <Text className="text-gray-500 text-xs ml-2">
-                {formatTimeAgo(transaction.createdAt)}
+                {formatTimeAgo(transactionDate)}
               </Text>
             </View>
           </View>
