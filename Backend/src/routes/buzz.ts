@@ -125,7 +125,6 @@ buzzrouter.get("/user/replies/:userid/:pagenumber"  , async(req , res)=>{
     try {
         const userid = req.params.userid
         const pagenumber = req.params.pagenumber
-        console.log(`Fetching replies for user ${userid}, page ${pagenumber}`);
         const data = await BuzzService.GetUserReplies(userid, parseInt(pagenumber))
         res.json({success : true , data : data})
     } catch (error) {
@@ -143,5 +142,18 @@ buzzrouter.get("/user/:userid/:pagenumber"  , async(req , res)=>{
         res.json({success : true , data : data})
     } catch (error) {
         res.json({success : false , error : error })
+    }
+})
+
+// Activity: recent likes on current user's buzzes
+buzzrouter.get("/activity/likes", AuthMiddleware, async (req, res) => {
+    try {
+        // @ts-ignore
+        const userid = req.user.id;
+        const page = parseInt(req.query.page as string) || 1;
+        const data = await BuzzService.GetRecentLikesForUser(userid, page);
+        res.json({ success: true, data });
+    } catch (error) {
+        res.json({ success: false, error: error });
     }
 })

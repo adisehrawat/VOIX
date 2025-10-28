@@ -86,27 +86,9 @@ export default function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
           className="text-2xl font-bold text-white mt-12 mb-3 text-center"
           style={{ opacity: textFadeAnim }}
         >
-          Welcome to VOIX
-        </Animated.Text>
-        
-        <Animated.Text
-          className="text-base text-white/70 mb-12 text-center"
-          style={{ opacity: taglineFadeAnim }}
-        >
-          Your voice, amplified
+          VOIX
         </Animated.Text>
 
-        <Animated.View style={{ opacity: buttonFadeAnim }}>
-          <TouchableOpacity
-            onPress={handleContinue}
-            className="bg-white px-8 py-4 rounded-full shadow-lg"
-            activeOpacity={0.8}
-          >
-            <Text className="text-black font-semibold text-lg">
-              Get Started
-            </Text>
-          </TouchableOpacity>
-        </Animated.View>
       </View>
     </Animated.View>
   );

@@ -116,7 +116,8 @@ export class VoixContract {
 
     static async tipuser_sol(tipper_pubkey: PublicKey, reciver_pubkey: PublicKey, amount: number, signer_string: string) {
         try {
-            const tipamount = new BN(amount)
+            // Convert SOL to lamports (1 SOL = 1e9 lamports)
+            const tipamount = new BN(amount * 1e9)
             const user2AccountPda = this.getUserPda(reciver_pubkey)
             const instruction = await program.methods.tipUserSol(tipamount).accounts({
                 tipper: tipper_pubkey,
@@ -138,8 +139,8 @@ export class VoixContract {
             await connection.sendRawTransaction(Buffer.from(data.signed_transaction, 'base64'));
             return true;
         } catch (error) {
-
-            return false;
+            console.error("tipuser_sol error:", error);
+            throw new Error(`Failed to process SOL tip: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
@@ -163,8 +164,10 @@ export class VoixContract {
                 TOKEN_PROGRAM_ID,
                 ASSOCIATED_TOKEN_PROGRAM_ID
             );
+            // Convert USDC to smallest unit (1 USDC = 1e6 smallest units)
+            const tipAmount = Math.floor(amount * 1e6);
             let instruction = await program.methods
-                .tipUserSpl(amount)
+                .tipUserSpl(tipAmount)
                 .accounts({
                     tipper: tipper_pubkey,
                     receiver: reciver_pubkey,
@@ -194,7 +197,8 @@ export class VoixContract {
 
                 return true
         } catch (error) {
-            return false;
+            console.error("tipuser_spl error:", error);
+            throw new Error(`Failed to process SPL tip: ${error instanceof Error ? error.message : String(error)}`);
         }
 
     

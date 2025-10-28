@@ -120,19 +120,7 @@ export class Authservice {
     }
 
     static async ApprovedRequest(senderId: string, reciverid: string) {
-
-        await prisma.friendRquest.update({
-            where: {
-                senderid_reciverid: {
-                    senderid: senderId,
-                    reciverid: reciverid
-                }
-            },
-            data: {
-                status: "Approved"
-            }
-        })
-
+        // Create the friendship first
         await prisma.friend.create({
             data: {
                 userid: senderId,
@@ -144,6 +132,16 @@ export class Authservice {
             data: {
                 userid: reciverid,
                 friendId: senderId
+            }
+        })
+
+        // Delete the friend request after creating the friendship
+        await prisma.friendRquest.delete({
+            where: {
+                senderid_reciverid: {
+                    senderid: senderId,
+                    reciverid: reciverid
+                }
             }
         })
 
@@ -184,20 +182,41 @@ export class Authservice {
     }
 
     static async GetFriends(userid: string) {
-        const data = await prisma.friend.findMany({
+        const friends = await prisma.friend.findMany({
             where: {
                 userid: userid
             }
-        })
+        });
 
-        return data;
+        // Manually fetch user data for each friend
+        const friendsWithUserData = await Promise.all(
+            friends.map(async (friend) => {
+                const user = await prisma.user.findUnique({
+                    where: { id: friend.friendId },
+                    select: {
+                        id: true,
+                        Name: true,
+                        ImageUrl: true,
+                        email: true
+                    }
+                });
+                return {
+                    ...friend,
+                    user: user
+                };
+            })
+        );
+
+        return friendsWithUserData;
     }
 
 
     static async RequestFrineds(userid: string) {
+        // Requests sent TO the current user (they received them)
         const data = await prisma.friendRquest.findMany({
             where: {
-                reciverid: userid
+                reciverid: userid,
+                status: 'Requested'
             },
             include: {
                 sender: {
@@ -215,9 +234,11 @@ export class Authservice {
     }
 
     static async PendinFriends(userid: string) {
+        // Requests sent BY the current user (they are pending approval)
         const data = await prisma.friendRquest.findMany({
             where: {
-                senderid: userid
+                senderid: userid,
+                status: 'Requested'
             },
             include: {
                 reciver: {

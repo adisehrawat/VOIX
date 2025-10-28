@@ -6,22 +6,14 @@ import { getAccount, getAssociatedTokenAddress } from "@solana/spl-token";
 
 export const walletRouter = Router();
 
-// Get wallet details (public key, SOL balance, token balances)
 walletRouter.get("/details", AuthMiddleware, async (req, res) => {
     try {
         // @ts-ignore
         const userid = req.user?.id || req.body?.user?.id;
-        console.log('Wallet details - userid:', userid);
-        // @ts-ignore
-        console.log('Wallet details - req.user:', req.user);
-        console.log('Wallet details - req.body:', req.body);
-        
         if (!userid) {
-            console.log('Wallet details - No userid found');
             return res.json({ success: false, error: "User ID not found" });
         }
         
-        // Get user's public key from database
         const user = await prisma.user.findUnique({
             where: { id: userid },
             select: { 
@@ -38,11 +30,9 @@ walletRouter.get("/details", AuthMiddleware, async (req, res) => {
 
         const publicKey = new PublicKey(user.public_key);
 
-        // Get SOL balance
         const solBalance = await connection.getBalance(publicKey);
         const solBalanceInSol = solBalance / 1_000_000_000; // Convert lamports to SOL
 
-        // USDC Mint address on Solana devnet (change for mainnet)
         const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"); // Devnet USDC
 
         let usdcBalance = 0;
@@ -54,8 +44,6 @@ walletRouter.get("/details", AuthMiddleware, async (req, res) => {
             const accountInfo = await getAccount(connection, usdcTokenAccount);
             usdcBalance = Number(accountInfo.amount) / 1_000_000; // USDC has 6 decimals
         } catch (error) {
-            // Token account doesn't exist yet, balance is 0
-            console.log("USDC token account not found, balance is 0");
         }
 
         res.json({
@@ -76,7 +64,6 @@ walletRouter.get("/details", AuthMiddleware, async (req, res) => {
     }
 });
 
-// Get transaction history
 walletRouter.get("/transactions", AuthMiddleware, async (req, res) => {
     try {
         // @ts-ignore
@@ -84,9 +71,7 @@ walletRouter.get("/transactions", AuthMiddleware, async (req, res) => {
         const page = parseInt(req.query.page as string) || 1;
         const limit = 20;
 
-        console.log('Fetching transactions for user:', userid, 'page:', page);
 
-        // Get user's public key
         const user = await prisma.user.findUnique({
             where: { id: userid },
             select: { public_key: true, Name: true, ImageUrl: true }
@@ -96,115 +81,40 @@ walletRouter.get("/transactions", AuthMiddleware, async (req, res) => {
             return res.json({ success: false, error: "User not found" });
         }
 
-        const publicKey = new PublicKey(user.public_key);
-        console.log('User public key:', publicKey.toString());
 
-        // Fetch blockchain transactions
-        let blockchainTransactions: any[] = [];
-        try {
-            const signatures = await connection.getSignaturesForAddress(publicKey, { limit: 50 });
-            console.log(`Found ${signatures.length} blockchain signatures`);
-
-            for (const sig of signatures) {
-                try {
-                    const tx = await connection.getParsedTransaction(sig.signature, {
-                        maxSupportedTransactionVersion: 0
-                    });
-
-                    if (tx && tx.meta && tx.meta.err === null) {
-                        // Parse SOL transfers
-                        const preBalances = tx.meta.preBalances;
-                        const postBalances = tx.meta.postBalances;
-                        const accountKeys = tx.transaction.message.accountKeys;
-
-                        // Find user's account index
-                        const userAccountIndex = accountKeys.findIndex(
-                            (key) => key.pubkey.toString() === publicKey.toString()
-                        );
-
-                        if (userAccountIndex !== -1) {
-                            const preBalance = preBalances[userAccountIndex];
-                            const postBalance = postBalances[userAccountIndex];
-                            const balanceChange = postBalance - preBalance;
-
-                            if (balanceChange !== 0) {
-                                // Determine sender/receiver
-                                let otherParty = 'Unknown';
-                                let direction = balanceChange > 0 ? 'received' : 'sent';
-                                
-                                // Try to find the other party in the transaction
-                                for (let i = 0; i < accountKeys.length; i++) {
-                                    if (i !== userAccountIndex) {
-                                        const otherKey = accountKeys[i].pubkey.toString();
-                                        // Check if this address belongs to a user in our database
-                                        const otherUser = await prisma.user.findFirst({
-                                            where: { public_key: otherKey },
-                                            select: { id: true, Name: true, ImageUrl: true }
-                                        });
-                                        if (otherUser) {
-                                            otherParty = otherUser.Name;
-                                            break;
-                                        }
-                                    }
-                                }
-
-                                blockchainTransactions.push({
-                                    id: sig.signature,
-                                    programid: 'blockchain',
-                                    senderId: direction === 'sent' ? userid : 'blockchain',
-                                    reciverid: direction === 'received' ? userid : 'blockchain',
-                                    sender: direction === 'sent' 
-                                        ? { id: userid, Name: user.Name, ImageUrl: user.ImageUrl }
-                                        : { id: 'blockchain', Name: otherParty, ImageUrl: 'https://i.pravatar.cc/150?img=1' },
-                                    receiver: direction === 'received'
-                                        ? { id: userid, Name: user.Name, ImageUrl: user.ImageUrl }
-                                        : { id: 'blockchain', Name: otherParty, ImageUrl: 'https://i.pravatar.cc/150?img=1' },
-                                    amount: (Math.abs(balanceChange) / 1_000_000_000).toFixed(4),
-                                    type: 'Normal' as const,
-                                    tokenSymbol: 'SOL',
-                                    createdAt: new Date(sig.blockTime! * 1000),
-                                    updatedAt: new Date(sig.blockTime! * 1000),
-                                    direction
-                                });
+        const sentTips = await prisma.tip.findMany({
+            where: { senderid: userid },
+            include: {
+                sender: {
+                    select: {
+                        id: true,
+                        Name: true,
+                        ImageUrl: true,
+                        public_key: true
+                    }
+                },
+                buzz: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                Name: true,
+                                ImageUrl: true,
+                                public_key: true
                             }
                         }
                     }
-                } catch (txError) {
-                    console.error('Error parsing transaction:', txError);
-                }
-            }
-
-            console.log(`Parsed ${blockchainTransactions.length} blockchain transactions`);
-        } catch (blockchainError) {
-            console.error('Error fetching blockchain transactions:', blockchainError);
-        }
-
-        // Get database transactions
-        const sentTransactions = await prisma.transaction.findMany({
-            where: { senderId: userid },
-            include: {
-                receiver: {
-                    select: {
-                        id: true,
-                        Name: true,
-                        ImageUrl: true,
-                        public_key: true
-                    }
-                },
-                sender: {
-                    select: {
-                        id: true,
-                        Name: true,
-                        ImageUrl: true,
-                        public_key: true
-                    }
                 }
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { created: 'desc' }
         });
 
-        const receivedTransactions = await prisma.transaction.findMany({
-            where: { reciverid: userid },
+        const receivedTips = await prisma.tip.findMany({
+            where: {
+                buzz: {
+                    userid: userid
+                }
+            },
             include: {
                 sender: {
                     select: {
@@ -214,43 +124,83 @@ walletRouter.get("/transactions", AuthMiddleware, async (req, res) => {
                         public_key: true
                     }
                 },
-                receiver: {
-                    select: {
-                        id: true,
-                        Name: true,
-                        ImageUrl: true,
-                        public_key: true
+                buzz: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                Name: true,
+                                ImageUrl: true,
+                                public_key: true
+                            }
+                        }
                     }
                 }
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { created: 'desc' }
         });
 
-        console.log(`Database: ${sentTransactions.length} sent, ${receivedTransactions.length} received`);
 
-        // Combine all transactions
-        const dbTransactions = [
-            ...sentTransactions.map(t => ({
-                ...t,
+        const tipTransactions = [
+            ...sentTips.map(tip => ({
+                id: tip.id,
+                programid: 'tip',
+                senderId: tip.senderid,
+                reciverid: tip.buzz.user.id,
+                sender: {
+                    id: tip.sender.id,
+                    Name: tip.sender.Name,
+                    ImageUrl: tip.sender.ImageUrl,
+                    public_key: tip.sender.public_key
+                },
+                receiver: {
+                    id: tip.buzz.user.id,
+                    Name: tip.buzz.user.Name,
+                    ImageUrl: tip.buzz.user.ImageUrl,
+                    public_key: tip.buzz.user.public_key
+                },
+                amount: tip.amount,
+                type: 'Tip' as const,
+                tokenSymbol: tip.symbol,
+                createdAt: tip.created,
+                updatedAt: tip.updatedAt,
                 direction: 'sent' as const
             })),
-            ...receivedTransactions.map(t => ({
-                ...t,
+            ...receivedTips.map(tip => ({
+                id: tip.id,
+                programid: 'tip',
+                senderId: tip.senderid,
+                reciverid: tip.buzz.user.id,
+                sender: {
+                    id: tip.sender.id,
+                    Name: tip.sender.Name,
+                    ImageUrl: tip.sender.ImageUrl,
+                    public_key: tip.sender.public_key
+                },
+                receiver: {
+                    id: tip.buzz.user.id,
+                    Name: tip.buzz.user.Name,
+                    ImageUrl: tip.buzz.user.ImageUrl,
+                    public_key: tip.buzz.user.public_key
+                },
+                amount: tip.amount,
+                type: 'Tip' as const,
+                tokenSymbol: tip.symbol,
+                createdAt: tip.created,
+                updatedAt: tip.updatedAt,
                 direction: 'received' as const
             }))
         ];
 
-        // Merge blockchain and database transactions, remove duplicates
-        const allTransactions = [...blockchainTransactions, ...dbTransactions]
+
+        const allTransactions = tipTransactions
+            .filter(tx => tx.type === 'Tip') // Extra safety filter
             .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-        console.log(`Total transactions: ${allTransactions.length}`);
 
-        // Apply pagination
         const skip = (page - 1) * limit;
         const paginatedTransactions = allTransactions.slice(skip, skip + limit);
 
-        // Calculate totals
         const sentTotal = allTransactions
             .filter(t => t.direction === 'sent')
             .reduce((sum, tx) => sum + parseFloat(tx.amount || "0"), 0);
@@ -276,52 +226,175 @@ walletRouter.get("/transactions", AuthMiddleware, async (req, res) => {
     }
 });
 
+walletRouter.get("/balances", AuthMiddleware, async (req, res) => {
+    try {
+        // @ts-ignore
+        const userid = req.user.id;
+        
+        const user = await prisma.user.findUnique({
+            where: { id: userid },
+            select: { public_key: true }
+        });
+
+        if (!user) {
+            return res.json({ success: false, error: "User not found" });
+        }
+
+        const publicKey = new PublicKey(user.public_key);
+
+        const solBalance = await connection.getBalance(publicKey);
+        const solBalanceInSol = solBalance / 1_000_000_000;
+
+        const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+        
+        let usdcBalance = 0;
+        try {
+            const usdcTokenAccount = await getAssociatedTokenAddress(
+                USDC_MINT,
+                publicKey
+            );
+            const accountInfo = await getAccount(connection, usdcTokenAccount);
+            usdcBalance = Number(accountInfo.amount) / 1_000_000;
+        } catch (error) {
+            // Token account doesn't exist yet, balance is 0
+        }
+
+        res.json({
+            success: true,
+            data: {
+                SOL: solBalanceInSol,
+                USDC: usdcBalance
+            }
+        });
+
+    } catch (error) {
+        console.error("Get balances error:", error);
+        res.json({ success: false, error: "Failed to fetch balances" });
+    }
+});
+
 // Get recent transactions (last 5)
 walletRouter.get("/transactions/recent", AuthMiddleware, async (req, res) => {
     try {
         // @ts-ignore
         const userid = req.user.id;
 
-        const sentTransactions = await prisma.transaction.findMany({
-            where: { senderId: userid },
-            include: {
-                receiver: {
-                    select: {
-                        id: true,
-                        Name: true,
-                        ImageUrl: true
-                    }
-                }
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 5
-        });
-
-        const receivedTransactions = await prisma.transaction.findMany({
-            where: { reciverid: userid },
+        // Only fetch recent tips (no normal transactions)
+        const sentTips = await prisma.tip.findMany({
+            where: { senderid: userid },
             include: {
                 sender: {
                     select: {
                         id: true,
                         Name: true,
-                        ImageUrl: true
+                        ImageUrl: true,
+                        public_key: true
+                    }
+                },
+                buzz: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                Name: true,
+                                ImageUrl: true,
+                                public_key: true
+                            }
+                        }
                     }
                 }
             },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { created: 'desc' },
             take: 5
         });
 
-        const allTransactions = [
-            ...sentTransactions.map(t => ({
-                ...t,
+        const receivedTips = await prisma.tip.findMany({
+            where: {
+                buzz: {
+                    userid: userid
+                }
+            },
+            include: {
+                sender: {
+                    select: {
+                        id: true,
+                        Name: true,
+                        ImageUrl: true,
+                        public_key: true
+                    }
+                },
+                buzz: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                Name: true,
+                                ImageUrl: true,
+                                public_key: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: { created: 'desc' },
+            take: 5
+        });
+
+        // Convert tips to transaction format
+        const tipTransactions = [
+            ...sentTips.map(tip => ({
+                id: tip.id,
+                programid: 'tip',
+                senderId: tip.senderid,
+                reciverid: tip.buzz.user.id,
+                sender: {
+                    id: tip.sender.id,
+                    Name: tip.sender.Name,
+                    ImageUrl: tip.sender.ImageUrl,
+                    public_key: tip.sender.public_key
+                },
+                receiver: {
+                    id: tip.buzz.user.id,
+                    Name: tip.buzz.user.Name,
+                    ImageUrl: tip.buzz.user.ImageUrl,
+                    public_key: tip.buzz.user.public_key
+                },
+                amount: tip.amount,
+                type: 'Tip' as const,
+                tokenSymbol: tip.symbol,
+                createdAt: tip.created,
+                updatedAt: tip.updatedAt,
                 direction: 'sent' as const
             })),
-            ...receivedTransactions.map(t => ({
-                ...t,
+            ...receivedTips.map(tip => ({
+                id: tip.id,
+                programid: 'tip',
+                senderId: tip.senderid,
+                reciverid: tip.buzz.user.id,
+                sender: {
+                    id: tip.sender.id,
+                    Name: tip.sender.Name,
+                    ImageUrl: tip.sender.ImageUrl,
+                    public_key: tip.sender.public_key
+                },
+                receiver: {
+                    id: tip.buzz.user.id,
+                    Name: tip.buzz.user.Name,
+                    ImageUrl: tip.buzz.user.ImageUrl,
+                    public_key: tip.buzz.user.public_key
+                },
+                amount: tip.amount,
+                type: 'Tip' as const,
+                tokenSymbol: tip.symbol,
+                createdAt: tip.created,
+                updatedAt: tip.updatedAt,
                 direction: 'received' as const
             }))
-        ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 5);
+        ];
+
+        const allTransactions = tipTransactions
+            .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+            .slice(0, 5);
 
         res.json({
             success: true,

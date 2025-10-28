@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { walletAPI, WalletDetails, TransactionData } from '../services/api';
 import { useAuth } from './AuthContext';
 
@@ -17,54 +17,38 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const { isAuthenticated } = useAuth();
 
-  const loadWalletData = async () => {
+  const loadWalletData = useCallback(async () => {
     if (!isAuthenticated) {
-      console.log('WalletContext: User not authenticated');
       setWalletDetails(null);
       setRecentTransactions([]);
       return;
     }
 
     try {
-      console.log('WalletContext: Starting to load wallet data...');
       setLoading(true);
       
-      // Fetch wallet details (public key and balances)
-      console.log('WalletContext: Fetching wallet details...');
       const walletResponse = await walletAPI.getWalletDetails();
-      console.log('WalletContext: Wallet response:', walletResponse);
       
       if (walletResponse.success && walletResponse.data) {
         setWalletDetails(walletResponse.data);
-        console.log('WalletContext: Wallet details set:', walletResponse.data);
-      } else {
-        console.log('WalletContext: Failed to get wallet details:', walletResponse.error);
       }
 
-      // Fetch recent transactions
-      console.log('WalletContext: Fetching recent transactions...');
       const txResponse = await walletAPI.getRecentTransactions();
-      console.log('WalletContext: Transaction response:', txResponse);
       
       if (txResponse.success && txResponse.data) {
         setRecentTransactions(txResponse.data);
-        console.log('WalletContext: Transactions set, count:', txResponse.data.length);
-      } else {
-        console.log('WalletContext: Failed to get transactions:', txResponse.error);
       }
     } catch (error) {
       console.error('WalletContext: Error loading wallet data:', error);
     } finally {
       setLoading(false);
-      console.log('WalletContext: Loading complete');
     }
-  };
+  }, [isAuthenticated]);
 
-  const refreshWallet = async () => {
+  const refreshWallet = useCallback(async () => {
     await loadWalletData();
-  };
+  }, [loadWalletData]);
 
-  // Load wallet data when user is authenticated
   useEffect(() => {
     if (isAuthenticated) {
       loadWalletData();
@@ -72,7 +56,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setWalletDetails(null);
       setRecentTransactions([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   return (

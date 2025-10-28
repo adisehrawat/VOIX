@@ -1,5 +1,6 @@
 import { MessageCircle, MoreVertical } from 'lucide-react-native';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { router } from 'expo-router';
 import { Friend } from '../../types';
 
 interface FriendCardProps {
@@ -23,21 +24,27 @@ export default function FriendCard({ friend, onMessage, onMore }: FriendCardProp
   return (
     <View className="bg-zinc-900 rounded-2xl p-4 mb-3 border border-zinc-800">
       <View className="flex-row items-center">
-        <Image
-          source={{ uri: friend.user.imageUrl }}
-          className="w-14 h-14 rounded-full mr-3"
-        />
-        <View className="flex-1">
-          <Text className="text-white font-semibold text-base">
-            {friend.user.name}
-          </Text>
-          <Text className="text-gray-400 text-sm">
-            {friend.user.username}
-          </Text>
-          <Text className="text-gray-500 text-xs mt-1">
-            Friends since {formatTimeAgo(friend.createdAt)}
-          </Text>
-        </View>
+        <TouchableOpacity
+          onPress={() => friend.user?.id && router.push(`/user-profile/${friend.user.id}`)}
+          activeOpacity={0.8}
+          className="flex-row items-center flex-1"
+        >
+          <Image
+            source={{ uri: friend.user.imageUrl }}
+            className="w-14 h-14 rounded-full mr-3"
+          />
+          <View className="flex-1">
+            <Text className="text-white font-semibold text-base">
+              {friend.user.name}
+            </Text>
+            <Text className="text-gray-400 text-sm">
+              {friend.user.username}
+            </Text>
+            <Text className="text-gray-500 text-xs mt-1">
+              Friends since {formatTimeAgo(friend.createdAt)}
+            </Text>
+          </View>
+        </TouchableOpacity>
 
         <View className="flex-row gap-2">
           <TouchableOpacity

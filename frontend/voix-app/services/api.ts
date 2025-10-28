@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, STORAGE_KEYS } from '../config/constants';
 
-// ==================== TOKEN MANAGEMENT ====================
 
 export const TOKEN_KEY = STORAGE_KEYS.TOKEN;
 
@@ -9,7 +8,6 @@ export const saveToken = async (token: string) => {
   try {
     await AsyncStorage.setItem(TOKEN_KEY, token);
   } catch (error) {
-    console.error('Error saving token:', error);
   }
 };
 
@@ -17,7 +15,6 @@ export const getToken = async (): Promise<string | null> => {
   try {
     return await AsyncStorage.getItem(TOKEN_KEY);
   } catch (error) {
-    console.error('Error getting token:', error);
     return null;
   }
 };
@@ -26,11 +23,9 @@ export const removeToken = async () => {
   try {
     await AsyncStorage.removeItem(TOKEN_KEY);
   } catch (error) {
-    console.error('Error removing token:', error);
   }
 };
 
-// ==================== API HELPER ====================
 
 const apiCall = async (
   endpoint: string,
@@ -40,9 +35,6 @@ const apiCall = async (
 ) => {
   const url = `${API_BASE_URL}${endpoint}`;
   
-  // Debug logging
-  console.log('🚀 API Call:', method, url);
-  if (body) console.log('📦 Request Body:', JSON.stringify(body, null, 2));
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -67,14 +59,11 @@ const apiCall = async (
   try {
     const response = await fetch(url, config);
     
-    console.log('📡 Response Status:', response.status);
-    
     if (!response.ok) {
       console.error('❌ HTTP Error:', response.status, response.statusText);
     }
     
     const data = await response.json();
-    console.log('✅ Response Data:', data);
     
     return data;
   } catch (error) {
@@ -84,7 +73,6 @@ const apiCall = async (
   }
 };
 
-// ==================== AUTH API ====================
 
 export const authAPI = {
   /**
@@ -166,7 +154,6 @@ export const authAPI = {
   },
 };
 
-// ==================== BUZZ API ====================
 
 export const buzzAPI = {
   /**
@@ -261,9 +248,17 @@ export const buzzAPI = {
   getUserReplies: async (userid: string, pagenumber: number = 1) => {
     return apiCall(`/buzz/user/replies/${userid}/${pagenumber}`, 'GET');
   },
+
+  /**
+   * Get recent likes activity for current user buzzes
+   * GET /api/v1/buzz/activity/likes?page=1
+   * Requires: Authentication
+   */
+  getLikesActivity: async (page: number = 1) => {
+    return apiCall(`/buzz/activity/likes?page=${page}`, 'GET', undefined, true);
+  },
 };
 
-// ==================== FRIEND API ====================
 
 export const friendAPI = {
   /**
@@ -321,7 +316,6 @@ export const friendAPI = {
   },
 };
 
-// ==================== TIP API ====================
 
 export const tipAPI = {
   /**
@@ -363,7 +357,6 @@ export const tipAPI = {
   },
 };
 
-// ==================== KARMA API ====================
 
 export const karmaAPI = {
   /**
@@ -424,9 +417,17 @@ export const walletAPI = {
   getRecentTransactions: async () => {
     return apiCall('/wallet/transactions/recent', 'GET', undefined, true);
   },
+
+  /**
+   * Get user token balances
+   * GET /api/v1/wallet/balances
+   * Requires: Authentication
+   */
+  getBalances: async () => {
+    return apiCall('/wallet/balances', 'GET', undefined, true);
+  },
 };
 
-// ==================== TYPE DEFINITIONS ====================
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -571,7 +572,6 @@ export interface TransactionHistoryResponse {
   hasMore: boolean;
 }
 
-// Search API
 export const searchAPI = {
   search: async (query: string, type: 'all' | 'users' | 'buzzes' = 'all', page: number = 1, limit: number = 10) => {
     return apiCall(`/search?q=${encodeURIComponent(query)}&type=${type}&page=${page}&limit=${limit}`, 'GET');
@@ -582,7 +582,6 @@ export const searchAPI = {
   }
 };
 
-// Friend Request API
 export const friendRequestAPI = {
   sendRequest: async (receiverId: string) => {
     return apiCall('/friends/request-friend', 'POST', { reciverid: receiverId }, true);

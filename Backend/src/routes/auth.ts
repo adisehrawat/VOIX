@@ -113,9 +113,6 @@ authrouter.put("/update-profile", AuthMiddleware, async(req, res) => {
         const userid = req.user?.id;
         const { name, imageUrl } = req.body;
         
-        console.log('Update profile - userid:', userid);
-        console.log('Update profile - name:', name);
-        console.log('Update profile - imageUrl:', imageUrl ? 'provided' : 'not provided');
         
         if (!userid) {
             return res.json({ success: false, error: "User ID not found" });

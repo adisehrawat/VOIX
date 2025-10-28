@@ -87,7 +87,6 @@ const Explore = () => {
       if (response.success && response.data) {
         if (isRefresh || pageNum === 1) {
           setResults(response.data);
-          // Load friendship statuses for users
           if (response.data.users && response.data.users.length > 0) {
             loadFriendshipStatuses(response.data.users);
           }
@@ -97,7 +96,6 @@ const Explore = () => {
             users: [...(prev?.users || []), ...response.data.users],
             buzzes: [...(prev?.buzzes || []), ...response.data.buzzes]
           }));
-          // Load friendship statuses for new users
           if (response.data.users && response.data.users.length > 0) {
             loadFriendshipStatuses(response.data.users);
           }
@@ -172,11 +170,9 @@ const Explore = () => {
           break;
         
         case 'request_sent':
-          // Already sent request, do nothing
           break;
         
         case 'self':
-          // Can't friend yourself
           break;
       }
     } catch (error) {
@@ -201,7 +197,6 @@ const Explore = () => {
   );
 
   const renderEmptyState = () => {
-    // Show loading only when actually searching (not when typing)
     if (loading && !isTyping) {
       return (
         <View className="flex-1 items-center justify-center py-20">
@@ -211,7 +206,6 @@ const Explore = () => {
       );
     }
 
-    // Show typing indicator only when typing and not loading
     if (isTyping && !loading) {
       return (
         <View className="flex-1 items-center justify-center py-20">
@@ -346,7 +340,6 @@ const Explore = () => {
   );
 };
 
-// User Search Card Component
 interface UserSearchCardProps {
   user: SearchUser;
   onPress: () => void;

@@ -11,6 +11,7 @@ export interface ProfileHeaderProps {
     stats: {
       posts: number;
       friends: number;
+      tipsReceived: number;
     };
     coins: number;
   };
@@ -65,7 +66,7 @@ export default function ProfileHeader({ user, karma = 0, nfts = 0, onFriendsPres
         </View>
         <View className="bg-orange-500 px-3 py-2 rounded-full flex-row items-center">
           <Text className="text-white text-lg font-bold mr-1">🪙</Text>
-          <Text className="text-white text-base font-bold">{user.coins}</Text>
+          <Text className="text-white text-base font-bold">{user.stats.tipsReceived}</Text>
         </View>
       </View>
 

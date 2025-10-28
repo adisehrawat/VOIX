@@ -172,7 +172,6 @@ export class BuzzService {
             }
         })
 
-        console.log(`GetBuzzs page ${pagenumber}: Fetched ${data.length} buzzes before sorting`)
 
         // Calculate vote scores and sort by popularity (upvotes - downvotes)
         const buzzesWithScores = data.map(buzz => {
@@ -198,17 +197,7 @@ export class BuzzService {
         const startIndex = (pagenumber - 1) * 10;
         const paginatedBuzzes = sortedBuzzes.slice(startIndex, startIndex + 10);
 
-        console.log(`GetBuzzs page ${pagenumber}: Returned ${paginatedBuzzes.length} buzzes sorted by popularity`)
         
-        // Log top buzzes for debugging
-        if (paginatedBuzzes.length > 0) {
-            console.log('Top buzzes by votes:', paginatedBuzzes.slice(0, 3).map(b => ({
-                id: b.id,
-                voteScore: b.voteScore,
-                upvotes: b.Vote.filter(v => v.type === 'UpVote').length,
-                downvotes: b.Vote.filter(v => v.type === 'DownVote').length
-            })));
-        }
         
         return paginatedBuzzes
     }
@@ -233,7 +222,6 @@ export class BuzzService {
             }
         })
 
-        console.log(`GetBuzzReply for buzz ${postid}: Returned ${data.length} comments`)
         return data
     }
 
@@ -282,7 +270,6 @@ export class BuzzService {
             
             // If user has no friends, return empty array
             if (friendIds.length === 0) {
-                console.log(`getBuzzBasedOnFriends: User ${userid} has no friends`)
                 return [];
             }
 
@@ -334,7 +321,6 @@ export class BuzzService {
                 take: fetchLimit
             });
 
-            console.log(`getBuzzBasedOnFriends: Fetched ${buzzes.length} buzzes before sorting`)
 
             // Calculate vote scores and sort by popularity (upvotes - downvotes)
             const buzzesWithScores = buzzes.map(buzz => {
@@ -360,11 +346,9 @@ export class BuzzService {
             const startIndex = (pagenumber - 1) * 10;
             const paginatedBuzzes = sortedBuzzes.slice(startIndex, startIndex + 10);
 
-            console.log(`getBuzzBasedOnFriends: Returned ${paginatedBuzzes.length} buzzes sorted by popularity for user ${userid}`)
             return paginatedBuzzes;
 
         } catch (error) {
-            console.log(error);
             throw new Error("Something went wrong while fetching friend buzzes");
         }
     }
@@ -416,10 +400,8 @@ export class BuzzService {
                 take: 10
             });
 
-            console.log(`GetUserBuzzes: Returned ${buzzes.length} buzzes for user ${userid}, page ${pagenumber} (excluding comments)`)
             return buzzes;
         } catch (error) {
-            console.log(error);
             throw new Error("Something went wrong while fetching user buzzes");
         }
     }
@@ -467,10 +449,8 @@ export class BuzzService {
                 take: 10
             });
 
-            console.log(`GetUserReplies: Returned ${replies.length} replies for user ${userid}, page ${pagenumber}`)
             return replies;
         } catch (error) {
-            console.log(error);
             throw new Error("Something went wrong while fetching user replies");
         }
     }
@@ -522,8 +502,54 @@ export class BuzzService {
 
             return buzz;
         } catch (error) {
-            console.log(error);
             throw new Error("Something went wrong while fetching buzz");
         }
+    }
+
+    static async GetRecentLikesForUser(userid: string, page: number = 1, limit: number = 20) {
+        const skip = (page - 1) * limit;
+
+        const votes = await prisma.vote.findMany({
+            where: {
+                type: 'UpVote',
+                buzz: {
+                    userid: userid
+                }
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        Name: true,
+                        ImageUrl: true,
+                        email: true
+                    }
+                },
+                buzz: {
+                    select: {
+                        id: true,
+                        content: true,
+                        user: {
+                            select: {
+                                id: true,
+                                Name: true,
+                                ImageUrl: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' },
+            skip,
+            take: limit
+        });
+
+        return votes.map(v => ({
+            id: v.id,
+            liker: v.user,
+            buzz: v.buzz,
+            createdAt: v.createdAt,
+            type: 'like' as const
+        }));
     }
 }

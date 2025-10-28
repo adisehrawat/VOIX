@@ -44,9 +44,11 @@ export default function FriendRequestsScreen() {
       setLoading(true);
       console.log('Loading friend requests for user:', userData.id);
       
+      // Received = requests sent TO me (backend endpoint: /friends/requested)
+      // Sent = requests sent BY me (backend endpoint: /friends/pending)
       const [receivedResponse, sentResponse] = await Promise.all([
-        friendRequestAPI.getPendingRequests(),
-        friendRequestAPI.getSentRequests()
+        friendRequestAPI.getSentRequests(),
+        friendRequestAPI.getPendingRequests()
       ]);
 
       console.log('Received response:', receivedResponse);
@@ -96,6 +98,8 @@ export default function FriendRequestsScreen() {
         setReceivedRequests(prev => prev.filter(req => req.id !== requestId));
         refreshProfile(); // Refresh friend count
         Alert.alert('Success', 'Friend request accepted!');
+        // Reload requests to ensure UI is in sync
+        loadRequests();
       } else {
         Alert.alert('Error', 'Failed to accept friend request');
       }

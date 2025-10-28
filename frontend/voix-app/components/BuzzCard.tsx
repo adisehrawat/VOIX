@@ -24,29 +24,21 @@ const formatTimeAgo = (date: Date): string => {
   return `${Math.floor(diffInSeconds / 86400)}d ago`;
 };
 
-// Helper to decode JWT and get user ID
 const getCurrentUserId = async (): Promise<string | null> => {
   try {
     const token = await AsyncStorage.getItem(STORAGE_KEYS.TOKEN);
-    console.log('getCurrentUserId - Token key:', STORAGE_KEYS.TOKEN);
-    console.log('getCurrentUserId - Token exists:', !!token);
     
     if (!token) {
-      console.log('getCurrentUserId - No token found');
       return null;
     }
     
     const parts = token.split('.');
-    console.log('getCurrentUserId - Token parts:', parts.length);
     
     if (parts.length !== 3) {
-      console.log('getCurrentUserId - Invalid token format');
       return null;
     }
     
     const payload = JSON.parse(atob(parts[1]));
-    console.log('getCurrentUserId - Decoded payload:', payload);
-    console.log('getCurrentUserId - User ID:', payload.id);
     
     return payload.id || null;
   } catch (error) {
@@ -64,37 +56,30 @@ const BuzzCard = ({ buzz, onVoteUpdate }: BuzzCardProps) => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [localBuzz, setLocalBuzz] = useState(buzz);
 
-  // Get current user ID on mount (only once)
   useEffect(() => {
     const initializeUserId = async () => {
       const userId = await getCurrentUserId();
-      console.log('BuzzCard - Setting currentUserId:', userId);
       setCurrentUserId(userId);
     };
     
     initializeUserId();
   }, []); // Run only once on mount
 
-  // Check vote status whenever localBuzz.Vote or currentUserId changes
   useEffect(() => {
     if (currentUserId && localBuzz.Vote) {
       const existingVote = localBuzz.Vote.find(v => v.userid === currentUserId);
       if (existingVote && existingVote.type) {
-        console.log('BuzzCard - Found existing vote:', existingVote.type);
         setUserVote(existingVote.type);
       } else {
-        console.log('BuzzCard - No existing vote found');
         setUserVote(null);
       }
     }
   }, [currentUserId, localBuzz.Vote]);
 
-  // Update local buzz when prop changes
   useEffect(() => {
     setLocalBuzz(buzz);
   }, [buzz]);
 
-  // Calculate vote counts from local buzz
   const upvotes = useMemo(() => {
     if (!localBuzz.Vote || !Array.isArray(localBuzz.Vote)) return 0;
     return localBuzz.Vote.filter(v => v && v.type === 'UpVote').length;
@@ -107,44 +92,28 @@ const BuzzCard = ({ buzz, onVoteUpdate }: BuzzCardProps) => {
   
   const commentCount = localBuzz._count?.replies || 0;
 
-  // Debug logging
-  useEffect(() => {
-    console.log(`Buzz ${localBuzz.id} stats:`, {
-      totalVotes: localBuzz.Vote?.length || 0,
-      upvotes,
-      downvotes,
-      comments: commentCount,
-      userVote
-    });
-  }, [localBuzz.id, localBuzz.Vote, upvotes, downvotes, commentCount, userVote]);
 
   const handlePress = () => {
     router.push(`/buzz/${buzz.id}`);
   };
 
   const handleVote = async (type: 'UpVote' | 'DownVote') => {
-    console.log('handleVote called:', { type, voting, currentUserId, userVote });
     
     if (voting) {
-      console.log('Already voting, skipping...');
       return;
     }
     
     if (!currentUserId) {
-      console.log('No user ID, showing alert');
       Alert.alert('Login Required', 'Please login to vote');
       return;
     }
 
-    console.log(`Attempting to ${type} buzz ${buzz.id}`);
     const previousVote = userVote;
 
     try {
       setVoting(true);
 
-      // Optimistic UI update
       if (userVote === type) {
-        console.log(`Removing ${type} from buzz ${buzz.id}`);
         setUserVote(null);
         
         const updatedVotes = localBuzz.Vote.filter(v => v.userid !== currentUserId);
@@ -152,7 +121,6 @@ const BuzzCard = ({ buzz, onVoteUpdate }: BuzzCardProps) => {
         
         await buzzAPI.deleteVote(buzz.id);
       } else if (userVote && userVote !== type) {
-        console.log(`Switching vote from ${userVote} to ${type} on buzz ${buzz.id}`);
         setUserVote(type);
         
         const updatedVotes = localBuzz.Vote.map(v => 
@@ -162,7 +130,6 @@ const BuzzCard = ({ buzz, onVoteUpdate }: BuzzCardProps) => {
         
         await buzzAPI.createVote(buzz.id, type);
       } else {
-        console.log(`Adding ${type} to buzz ${buzz.id}`);
         setUserVote(type);
         
         const updatedVotes = [...localBuzz.Vote, { userid: currentUserId, type }];
@@ -171,14 +138,11 @@ const BuzzCard = ({ buzz, onVoteUpdate }: BuzzCardProps) => {
         await buzzAPI.createVote(buzz.id, type);
       }
 
-      console.log('Vote successful!');
 
-      // Refresh karma data if the vote affects karma (upvote)
       if (type === 'UpVote' || (previousVote === 'UpVote' && type === 'DownVote')) {
         refreshProfile();
       }
 
-      // Fetch updated buzz from backend to sync cache
       setTimeout(async () => {
         const updatedBuzz = await getBuzzById(buzz.id, true);
         if (updatedBuzz) {
@@ -254,7 +218,6 @@ const BuzzCard = ({ buzz, onVoteUpdate }: BuzzCardProps) => {
           {/* Upvote */}
           <TouchableOpacity 
             onPress={() => {
-              console.log('Upvote button pressed');
               handleVote('UpVote');
             }}
             disabled={voting}
@@ -278,7 +241,6 @@ const BuzzCard = ({ buzz, onVoteUpdate }: BuzzCardProps) => {
           {/* Downvote */}
           <TouchableOpacity 
             onPress={() => {
-              console.log('Downvote button pressed');
               handleVote('DownVote');
             }}
             disabled={voting}
@@ -322,20 +284,18 @@ const BuzzCard = ({ buzz, onVoteUpdate }: BuzzCardProps) => {
       recipient={{
         id: localBuzz.user.id,
         name: localBuzz.user.Name,
-        avatar: localBuzz.user.ImageUrl
+        avatar: localBuzz.user.ImageUrl,
+        publicKey: localBuzz.user.public_key
       }}
       buzzId={localBuzz.id}
       onClose={() => setShowTipModal(false)}
       onTip={(buzzId, amount, symbol) => {
-        console.log('Tipping buzz:', { buzzId, amount, symbol });
-        Alert.alert('Coming Soon', 'Tipping functionality will be available soon!');
       }}
     />
     </>
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders
 export default memo(BuzzCard, (prevProps, nextProps) => {
   return (
     prevProps.buzz.id === nextProps.buzz.id &&

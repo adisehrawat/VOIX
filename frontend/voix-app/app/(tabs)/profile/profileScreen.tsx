@@ -11,6 +11,7 @@ import ReplyCard from '../../../components/ReplyCard';
 import TransactionCard from '../../../components/transactions/TransactionCard';
 import { useProfile } from '../../../contexts/ProfileContext';
 import { useBuzz } from '../../../contexts/BuzzContext';
+import { useWallet } from '../../../contexts/WalletContext';
 import { BuzzData, walletAPI } from '../../../services/api';
 
 type TabType = 'buzzes' | 'replies' | 'transactions';
@@ -22,9 +23,9 @@ export default function Profile() {
   });
   const { userData, karmaData, friendsCount, refreshProfile } = useProfile();
   const { getUserBuzzes, getUserReplies } = useBuzz();
+  const { recentTransactions } = useWallet();
   const [refreshing, setRefreshing] = useState(false);
   
-  // Buzzes state
   const [buzzes, setBuzzes] = useState<BuzzData[]>([]);
   const [buzzesLoading, setBuzzesLoading] = useState(false);
   const [buzzPage, setBuzzPage] = useState(1);
@@ -32,25 +33,17 @@ export default function Profile() {
   const [initialLoad, setInitialLoad] = useState(true);
   const isFirstFocus = useRef(true);
 
-  // Replies state
   const [replies, setReplies] = useState<BuzzData[]>([]);
   const [repliesLoading, setRepliesLoading] = useState(false);
   const [replyPage, setReplyPage] = useState(1);
   const [replyHasMore, setReplyHasMore] = useState(true);
   const [replyInitialLoad, setReplyInitialLoad] = useState(true);
 
-  // Transactions state
   const [transactions, setTransactions] = useState<any[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [transactionPage, setTransactionPage] = useState(1);
   const [transactionHasMore, setTransactionHasMore] = useState(true);
   const [transactionInitialLoad, setTransactionInitialLoad] = useState(true);
-
-
-  // Initial load is now handled in the tab switching useEffect
-
-
-  // Load data when tab changes
   useEffect(() => {
     if (!userData?.id) return;
     
@@ -61,22 +54,16 @@ export default function Profile() {
     } else if (activeTab === 'transactions' && transactionInitialLoad) {
       loadTransactions(1, true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, userData?.id]);
 
-  // Refresh when screen comes into focus (e.g., after creating a buzz)
   useFocusEffect(
     useCallback(() => {
-      // Skip the first focus (initial mount)
       if (isFirstFocus.current) {
         isFirstFocus.current = false;
         return;
       }
       
-      // Only refresh if not the initial load and user data is available
       if (!initialLoad && userData?.id) {
-        console.log('Profile focused - refreshing current tab and karma');
-        // Refresh karma data
         refreshProfile();
         
         if (activeTab === 'buzzes') {
@@ -87,7 +74,6 @@ export default function Profile() {
           loadTransactions(1, true);
         }
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialLoad, userData?.id, activeTab])
   );
 
@@ -96,10 +82,8 @@ export default function Profile() {
 
     try {
       setBuzzesLoading(true);
-      console.log(`Loading user buzzes - page: ${pageNum}`);
 
       const newBuzzes = await getUserBuzzes(userData.id, pageNum, isRefresh);
-      console.log(`Loaded ${newBuzzes.length} user buzzes`);
 
       if (isRefresh) {
         setBuzzes(newBuzzes);
@@ -122,10 +106,8 @@ export default function Profile() {
 
     try {
       setRepliesLoading(true);
-      console.log(`Loading user replies - page: ${pageNum}`);
 
       const newReplies = await getUserReplies(userData.id, pageNum, isRefresh);
-      console.log(`Loaded ${newReplies.length} user replies`);
 
       if (isRefresh) {
         setReplies(newReplies);
@@ -148,14 +130,11 @@ export default function Profile() {
 
     try {
       setTransactionsLoading(true);
-      console.log(`Loading transactions - page: ${pageNum}`);
 
       const response = await walletAPI.getTransactions(pageNum);
-      console.log('Transactions API response:', response);
 
       if (response.success && response.data) {
         const newTransactions = response.data.transactions || [];
-        console.log(`Loaded ${newTransactions.length} transactions`);
 
         if (isRefresh) {
           setTransactions(newTransactions);
@@ -223,7 +202,6 @@ export default function Profile() {
   const handleTabChange = useCallback((tab: TabType) => {
     setActiveTab(tab);
     
-    // Load data for the selected tab if not already loaded
     if (!userData?.id) return;
     
     if (tab === 'buzzes' && buzzes.length === 0 && !buzzesLoading) {
@@ -234,6 +212,19 @@ export default function Profile() {
       loadTransactions(1, true);
     }
   }, [userData?.id, buzzes.length, replies.length, transactions.length, buzzesLoading, repliesLoading, transactionsLoading, loadUserBuzzes, loadUserReplies, loadTransactions]);
+
+  const calculateTipStats = useCallback(() => {
+    if (!userData?.id || !recentTransactions) {
+      return { tipsReceived: 0 };
+    }
+
+    const tipTransactions = recentTransactions.filter(t => t.type === 'Tip');
+    const tipsReceived = tipTransactions.filter(t => t.reciverid === userData.id).length;
+
+    return { tipsReceived };
+  }, [userData?.id, recentTransactions]);
+
+  const tipStats = calculateTipStats();
 
   const renderHeader = useCallback(() => (
       <>
@@ -247,6 +238,7 @@ export default function Profile() {
             stats: {
               posts: buzzes.length, // Show actual buzz count
               friends: friendsCount, // Show actual friends count
+              tipsReceived: tipStats.tipsReceived, // Show tips received count
             },
             coins: 0, // Can add wallet balance later
           }}
@@ -315,7 +307,7 @@ export default function Profile() {
           </TouchableOpacity>
       </View>
     </>
-  ), [userData, karmaData, friendsCount, buzzes.length, activeTab, handleFriendsPress, handleTabChange]);
+  ), [userData, karmaData, friendsCount, buzzes.length, activeTab, handleFriendsPress, handleTabChange, tipStats.tipsReceived]);
 
   const renderBuzzItem = useCallback(({ item }: { item: BuzzData }) => (
     <BuzzCard buzz={item} onVoteUpdate={() => loadUserBuzzes(1, true)} />
@@ -330,7 +322,6 @@ export default function Profile() {
   ), [userData?.id]);
 
   const renderFooter = () => {
-    // Only show footer loading when loading more data (pagination), not initial load
     const isPaginationLoading = 
       (activeTab === 'buzzes' && buzzesLoading && buzzes.length > 0) ||
       (activeTab === 'replies' && repliesLoading && replies.length > 0) ||
@@ -346,13 +337,11 @@ export default function Profile() {
   };
 
   const renderEmptyState = () => {
-    // Check if we're loading data for the first time
     const isInitialLoading = 
       (activeTab === 'buzzes' && buzzesLoading && buzzes.length === 0) ||
       (activeTab === 'replies' && repliesLoading && replies.length === 0) ||
       (activeTab === 'transactions' && transactionsLoading && transactions.length === 0);
 
-    // Show loading indicator when loading for the first time
     if (isInitialLoading) {
       return (
         <View className="flex-1 items-center justify-center py-20">
@@ -366,7 +355,6 @@ export default function Profile() {
       );
     }
 
-    // Show empty state when no data and not loading
     if (activeTab === 'buzzes') {
       return (
         <View className="flex-1 items-center justify-center py-20">
@@ -393,7 +381,6 @@ export default function Profile() {
 
   if (!fontsLoaded) return null;
 
-  // Only show global loading when userData is not available (initial load)
   if (!userData) {
     return (
       <SafeAreaView className="flex-1 bg-black items-center justify-center">

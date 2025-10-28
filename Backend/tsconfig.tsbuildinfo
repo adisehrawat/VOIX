@@ -1,0 +1,33 @@
+{
+    "root": [
+        "./custom.d.ts",
+        "./src/index.ts",
+        "./src/services/authservice.ts",
+        "./src/services/buzzservice.ts",
+        "./src/services/karmaservice.ts",
+        "./src/services/searchservice.ts",
+        "./src/services/smartcontrac.ts",
+        "./src/services/transaction.ts",
+        "./src/services/zschema.ts",
+        "./src/singelton/index.ts",
+        "./src/generated/prisma/client.d.ts",
+        "./src/generated/prisma/default.d.ts",
+        "./src/generated/prisma/edge.d.ts",
+        "./src/generated/prisma/index.d.ts",
+        "./src/generated/prisma/wasm.d.ts",
+        "./src/generated/prisma/runtime/index-browser.d.ts",
+        "./src/generated/prisma/runtime/library.d.ts",
+        "./src/handlers/auth.ts",
+        "./src/middlewares/index.ts",
+        "./src/routes/auth.ts",
+        "./src/routes/buzz.ts",
+        "./src/routes/friend.ts",
+        "./src/routes/karma.ts",
+        "./src/routes/search.ts",
+        "./src/routes/tip.ts",
+        "./src/routes/wallet.ts",
+        "./src/scripts/initializesmartcontract.ts",
+        "./src/target/types/voix.ts"
+    ],
+    "version": "5.9.3"
+}

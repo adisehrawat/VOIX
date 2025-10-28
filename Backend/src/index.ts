@@ -1,5 +1,7 @@
 import express from "express"
 import dotenv from "dotenv"
+
+dotenv.config() ; 
 import cors from "cors"
 import   {authrouter} from "./routes/auth"
 import { buzzrouter } from "./routes/buzz";
@@ -9,7 +11,7 @@ import { karmarouter } from "./routes/karma";
 import { walletRouter } from "./routes/wallet";
 import { searchrouter } from "./routes/search";
 
-dotenv.config() ; 
+
 
 const app = express() ; 
 const PORT = process.env.PORT
@@ -21,10 +23,8 @@ app.use(cors())
 app.use(express.json())
 
 
-  
-  
 
-app.use("/api/v1/auth"  , authrouter) ;
+app.use("/api/v1/auth"  , authrouter)
 app.use("/api/v1/buzz"  , buzzrouter)
 app.use("/api/v1/friends"  , friendrouter)
 app.use("/api/v1/tip"  ,  tiprouter)

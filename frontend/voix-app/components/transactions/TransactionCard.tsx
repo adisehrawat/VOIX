@@ -18,13 +18,30 @@ const formatTimeAgo = (date: Date): string => {
 };
 
 export default function TransactionCard({ transaction, currentUserId }: TransactionCardProps) {
+  // Only render if transaction type is Tip
+  if (transaction.type !== 'Tip') {
+    return null;
+  }
+
   const isSent = transaction.senderId === currentUserId;
   const otherUser = isSent ? transaction.receiver : transaction.sender;
   const isPositive = !isSent;
 
-  // Handle both lowercase (imageUrl, name) and capitalized (ImageUrl, Name) formats
-  const otherUserImage = (otherUser as any)?.ImageUrl || otherUser.imageUrl || 'https://i.pravatar.cc/150?img=1';
-  const otherUserName = (otherUser as any)?.Name || otherUser.name || 'Unknown';
+
+  // Check if this is a VOIX user or external wallet
+  const isVOIXUser = (otherUser as any)?.Name || (otherUser as any)?.name;
+  const otherUserPublicKey = (otherUser as any)?.public_key || (otherUser as any)?.publicKey || '';
+  
+  // For VOIX users, show their image and name
+  // For external wallets, show blank avatar and public key
+  const otherUserImage = isVOIXUser 
+    ? ((otherUser as any)?.ImageUrl || (otherUser as any)?.imageUrl || 'https://i.pravatar.cc/150?img=1')
+    : null; // No image for external wallets
+    
+  const truncateKey = (key: string) => (key && key.length > 10 ? `${key.slice(0, 6)}...${key.slice(-6)}` : key);
+  const otherUserName = isVOIXUser 
+    ? ((otherUser as any)?.Name || (otherUser as any)?.name)
+    : (otherUserPublicKey ? truncateKey(otherUserPublicKey) : 'External Wallet');
   const transactionDate = typeof transaction.createdAt === 'string' 
     ? new Date(transaction.createdAt) 
     : transaction.createdAt;
@@ -47,10 +64,16 @@ export default function TransactionCard({ transaction, currentUserId }: Transact
 
         {/* User Info */}
         <View className="flex-1 flex-row items-center">
-          <Image
-            source={{ uri: otherUserImage }}
-            className="w-10 h-10 rounded-full mr-3"
-          />
+          {otherUserImage ? (
+            <Image
+              source={{ uri: otherUserImage }}
+              className="w-10 h-10 rounded-full mr-3"
+            />
+          ) : (
+            <View className="w-10 h-10 rounded-full mr-3 bg-gray-600 items-center justify-center">
+              <Text className="text-gray-400 text-xs">?</Text>
+            </View>
+          )}
           <View className="flex-1">
             <Text className="text-white font-semibold text-base">
               {isSent ? 'Sent to' : 'Received from'} {otherUserName}

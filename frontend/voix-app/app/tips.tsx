@@ -6,20 +6,55 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import TipAnalytics from '../components/tips/TipAnalytics';
 import TipHistory from '../components/tips/TipHistory';
-import { dummyTransactions } from '../data/dummyTransactions';
+import { useWallet } from '../contexts/WalletContext';
+import { useProfile } from '../contexts/ProfileContext';
 
 type TabType = 'history' | 'analytics';
 
 export default function Tips() {
   const [activeTab, setActiveTab] = useState<TabType>('history');
-  const currentUserId = '1'; // This would come from auth context
+  const { recentTransactions } = useWallet();
+  const { userData } = useProfile();
+  const currentUserId = userData?.id || '';
 
   const [fontsLoaded] = useFonts({
     StickNoBills_500Medium,
   });
 
-  // Filter only tip transactions
-  const tipTransactions = dummyTransactions.filter(t => t.type === 'Tip');
+  // Filter only tip transactions from real data and convert to Transaction format
+  const tipTransactions = recentTransactions
+    .filter(t => t.type === 'Tip')
+    .map(t => ({
+      id: t.id,
+      programId: t.programid,
+      senderId: t.senderId,
+      sender: { 
+        id: t.senderId, 
+        name: 'Unknown', 
+        imageUrl: '', 
+        email: '', 
+        publicKey: '', 
+        walletId: '', 
+        authType: 'Password' as const,
+        createdAt: new Date()
+      },
+      receiverId: t.reciverid,
+      receiver: { 
+        id: t.reciverid, 
+        name: 'Unknown', 
+        imageUrl: '', 
+        email: '', 
+        publicKey: '', 
+        walletId: '', 
+        authType: 'Password' as const,
+        createdAt: new Date()
+      },
+      amount: t.amount,
+      type: t.type,
+      tokenSymbol: t.tokenSymbol,
+      createdAt: new Date(t.createdAt),
+      updatedAt: new Date(t.updatedAt)
+    }));
 
   // Calculate analytics
   const totalTipsReceived = tipTransactions
@@ -32,10 +67,13 @@ export default function Tips() {
     .reduce((sum, t) => sum + parseFloat(t.amount), 0)
     .toFixed(2);
 
-  const topTipper = {
-    name: 'Sarah Chen',
-    amount: '1.0',
-  };
+  // Find top tipper from real data
+  const topTipper = tipTransactions
+    .filter(t => t.receiverId === currentUserId)
+    .reduce((max, t) => {
+      const amount = parseFloat(t.amount);
+      return amount > parseFloat(max.amount) ? { name: t.sender.name, amount: t.amount } : max;
+    }, { name: 'No tips yet', amount: '0' });
 
   if (!fontsLoaded) return null;
 

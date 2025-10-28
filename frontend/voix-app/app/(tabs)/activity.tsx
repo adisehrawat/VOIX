@@ -1,11 +1,11 @@
 import { StickNoBills_500Medium, useFonts } from "@expo-google-fonts/stick-no-bills";
 import { MessageCircle, UserPlus } from "lucide-react-native";
-import { useState } from 'react';
-import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FriendRequestCard from '../../components/friends/FriendRequestCard';
-import { Activity as ActivityType, dummyActivities } from '../../data/dummyActivity';
-import { dummyFriendRequests } from '../../data/dummyFriends';
+import { useProfile } from '../../contexts/ProfileContext';
+import { buzzAPI, friendRequestAPI } from '../../services/api';
 
 const formatTimeAgo = (date: Date): string => {
   const now = new Date();
@@ -17,27 +17,22 @@ const formatTimeAgo = (date: Date): string => {
   return `${Math.floor(diffInSeconds / 86400)}d ago`;
 };
 
-const ActivityItem = ({ item }: { item: ActivityType }) => {
+type LikeActivity = {
+  id: string;
+  liker: { id: string; Name: string; ImageUrl: string; email?: string };
+  buzz: { id: string; content?: string; user: { id: string; Name: string; ImageUrl: string } };
+  createdAt: string | Date;
+  type: 'like';
+};
+
+const ActivityItem = ({ item }: { item: LikeActivity }) => {
   const getActivityText = () => {
     switch (item.type) {
-      case 'tip':
-        return (
-          <Text className="text-white text-base flex-1">
-            <Text className="font-bold">{item.user.name}</Text>
-            {' tipped '}
-            <Text className="font-bold">{item.targetUser?.name}</Text>
-            {' '}
-            <Text className="font-bold">{item.amount} {item.post?.preview}</Text>
-            {' for your recent post.'}
-          </Text>
-        );
       case 'like':
         return (
           <Text className="text-white text-base flex-1">
-            <Text className="font-bold">{item.user.name}</Text>
-            {' liked '}
-            <Text className="font-bold">{item.targetUser?.name}&apos;s</Text>
-            {' post.'}
+            <Text className="font-bold">{item.liker.Name}</Text>
+            {' liked your post'}
           </Text>
         );
       default:
@@ -48,13 +43,13 @@ const ActivityItem = ({ item }: { item: ActivityType }) => {
   return (
     <View className="flex-row items-center px-6 py-3 border-b border-zinc-900">
       <Image
-        source={{ uri: item.user.avatar }}
+        source={{ uri: item.liker.ImageUrl }}
         className="w-12 h-12 rounded-full mr-3"
       />
       <View className="flex-1">
         {getActivityText()}
         <Text className="text-gray-400 text-sm mt-1">
-          {formatTimeAgo(item.timestamp)}
+          {formatTimeAgo(typeof item.createdAt === 'string' ? new Date(item.createdAt) : item.createdAt)}
         </Text>
       </View>
     </View>
@@ -62,20 +57,45 @@ const ActivityItem = ({ item }: { item: ActivityType }) => {
 };
 
 const Activity = () => {
-  const [friendRequests, setFriendRequests] = useState(dummyFriendRequests);
+  const { userData } = useProfile();
+  const [friendRequests, setFriendRequests] = useState<any[]>([]);
+  const [likes, setLikes] = useState<LikeActivity[]>([]);
+  const [loading, setLoading] = useState(true);
   const [fontsLoaded] = useFonts({
     StickNoBills_500Medium,
   });
 
-  const handleAcceptRequest = (requestId: string) => {
-    console.log('Accepting request:', requestId);
-    setFriendRequests(friendRequests.filter(req => req.id !== requestId));
+  const handleAcceptRequest = async (requestId: string, senderId: string) => {
+    await friendRequestAPI.acceptRequest(senderId);
+    setFriendRequests(prev => prev.filter(r => r.id !== requestId));
   };
 
-  const handleRejectRequest = (requestId: string) => {
-    console.log('Rejecting request:', requestId);
-    setFriendRequests(friendRequests.filter(req => req.id !== requestId));
+  const handleRejectRequest = async (requestId: string, senderId: string) => {
+    await friendRequestAPI.rejectRequest(senderId);
+    setFriendRequests(prev => prev.filter(r => r.id !== requestId));
   };
+
+  const loadData = useCallback(async () => {
+    if (!userData?.id) return;
+    setLoading(true);
+    try {
+      const [receivedRes, likesRes] = await Promise.all([
+        friendRequestAPI.getSentRequests(), // received requests
+        buzzAPI.getLikesActivity(1)
+      ]);
+      setFriendRequests(Array.isArray(receivedRes?.data) ? receivedRes.data : []);
+      setLikes(Array.isArray(likesRes?.data) ? likesRes.data : []);
+    } catch {
+      setFriendRequests([]);
+      setLikes([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [userData?.id]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   if (!fontsLoaded) return null;
 
@@ -92,9 +112,28 @@ const Activity = () => {
           {friendRequests.map(request => (
             <FriendRequestCard
               key={request.id}
-              request={request}
-              onAccept={handleAcceptRequest}
-              onReject={handleRejectRequest}
+              request={{
+                id: request.id,
+                senderId: request.senderid,
+                sender: {
+                  id: request.sender?.id,
+                  name: request.sender?.Name,
+                  username: request.sender?.email,
+                  email: request.sender?.email,
+                  imageUrl: request.sender?.ImageUrl,
+                  publicKey: '' as any,
+                  walletId: '' as any,
+                  authType: 'Password' as any,
+                  createdAt: new Date(),
+                } as any,
+                receiverId: request.reciverid,
+                receiver: {} as any,
+                status: 'Requested',
+                createdAt: new Date(request.createdAt),
+                updatedAt: new Date(request.updatedAt),
+              }}
+              onAccept={() => handleAcceptRequest(request.id, request.senderid)}
+              onReject={() => handleRejectRequest(request.id, request.senderid)}
             />
           ))}
           <View className="border-t border-zinc-900 mt-4 mb-2" />
@@ -131,14 +170,19 @@ const Activity = () => {
         </TouchableOpacity>
       </View>
       
+      {loading ? (
+        <View className="flex-1 items-center justify-center py-20">
+          <ActivityIndicator size="large" color="#ffffff" />
+        </View>
+      ) : (
       <FlatList
-        data={dummyActivities}
+        data={likes}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
         renderItem={({ item }) => <ActivityItem item={item} />}
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
-      />
+      />)}
     </SafeAreaView>
   );
 };
