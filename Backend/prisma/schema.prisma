@@ -1,0 +1,168 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+  previewFeatures = ["omitApi"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id         String @unique @default(uuid()) @id
+  Name       String  
+  ImageUrl    String @default("https://static.vecteezy.com/system/resources/thumbnails/020/765/399/small_2x/default-profile-account-unknown-icon-black-silhouette-free-vector.jpg")
+  email      String @unique
+  password   String?
+  public_key String
+  wallet_id   String
+  Auth_type   AuthType
+  Received Transaction[]  @relation("Receiver")
+  Seneded  Transaction[] @relation("Sender")
+  location  Location? @relation("UserLocation")
+  tip  Tip[]  @relation("Sender")
+  buzz      Buzz[]   @relation("Owner")
+  karma    Karma? @relation("UserKarma")
+  Votes     Vote[]   @relation("VoteOwner")
+  SendedFriends  FriendRquest[] @relation("Usersender")
+  RecivedFriends   FriendRquest[]  @relation("Userreciver")
+  Friends   Friend[] @relation("FinalFriends") 
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+
+  @@index([email])
+  @@index([id])
+}
+
+
+model FriendRquest {
+  id String @default(uuid()) @unique  @id
+  senderid  String 
+  sender    User @relation("Usersender"  , fields: [senderid]  , references: [id])
+  reciverid   String 
+  reciver    User @relation("Userreciver"  , fields: [reciverid]  , references: [id])
+  status     Status 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([senderid  , reciverid])
+
+}
+
+model Friend {
+  id String @id @unique @default(uuid())  
+  userid  String 
+  friendId   String 
+  user     User @relation("FinalFriends"  , fields: [userid]  , references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userid , friendId])
+}
+
+
+
+model Buzz {
+  id        String   @id @default(uuid())
+  parentBuzzId   String?
+  parentBuzz     Buzz?     @relation("BuzzComments", fields: [parentBuzzId], references: [id])
+  replies         Buzz[]    @relation("BuzzComments")
+  content   String?
+  image     String?
+  userid    String
+  user      User     @relation("Owner", fields: [userid], references: [id])
+  Vote      Vote[]   @relation("Buzz")
+  parentId  String?
+  tips      Tip[]    @relation("Buzztip")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Vote {
+  id        String   @id  @default(uuid())
+  userid    String
+  postid    String
+  user      User     @relation("VoteOwner", fields: [userid], references: [id])
+  buzz      Buzz     @relation("Buzz", fields: [postid], references: [id])
+  type  VoteType 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userid , postid])
+}
+
+model Transaction {
+  id          String   @unique @default(uuid())
+  programid   String
+  senderId    String
+  reciverid   String
+
+  sender      User  @relation("Sender"   , fields: [senderId]  , references: [id])
+  receiver      User @relation("Receiver"  , fields: [reciverid]  , references: [id])
+
+  amount      String
+  type  TransactionType
+  tokenSymbol String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Tip {
+  id        String   @unique @default(uuid())
+  amount    String
+  senderid  String
+  sender     User @relation("Sender"  , fields: [senderid]  , references: [id])
+  buzzid    String
+  buzz      Buzz     @relation("Buzztip", fields: [buzzid], references: [id])
+  symbol    String
+  created   DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Karma {
+  userid      String @unique
+  points      String
+  nfts        Int
+  user        User @relation("UserKarma"  , fields: [userid]  , references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+
+model Location {
+  userid    String @unique
+  user      User @relation("UserLocation"  , fields: [userid]  , references: [id])
+  Latitude String
+  Longitude String
+}
+
+enum VoteType {
+  UpVote
+  DownVote
+}
+
+enum Status {
+  Requested  
+  Approved
+}
+
+enum TransactionType {
+  Tip
+  Normal
+}
+
+
+enum AuthType {
+  Google  
+  Password
+}
+
+
+

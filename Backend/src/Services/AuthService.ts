@@ -1,0 +1,401 @@
+import { id } from "zod/v4/locales"
+import { prisma } from "../Singelton/index"
+import { KarmaService } from "./KarmaService"
+
+import jwt from "jsonwebtoken"
+
+const SECRET = process.env.JWT_SECRET
+
+export class Authservice {
+
+    static async CreateUser(name: string, email: string, password: string | null, imageUrl: string | undefined, authtype: "Google" | "Password", walletid: string, publickey: string) {
+        try {
+            const createdUser = await prisma.user.create({
+                data: {
+                    Name: name,
+                    email: email,
+                    password: password,
+                    wallet_id: walletid,
+                    public_key: publickey,
+                    Auth_type: authtype,
+                    ImageUrl: imageUrl ? imageUrl : "https://static.vecteezy.com/system/resources/thumbnails/020/765/399/small_2x/default-profile-account-unknown-icon-black-silhouette-free-vector.jpg",
+                }
+            })
+
+            return { id: createdUser.id, email: createdUser.email }
+
+        } catch (error) {
+            throw new Error("Something went wrong in Database")
+        }
+
+    }
+
+    static async UpdateUser(userid: string, updateData: { Name?: string, ImageUrl?: string }) {
+        const data = await prisma.user.update({
+            where: {
+                id: userid
+            },
+            data: updateData,
+            select: {
+                id: true,
+                Name: true,
+                ImageUrl: true,
+                email: true,
+                public_key: true,
+                wallet_id: true,
+                Auth_type: true,
+                createdAt: true
+            }
+        })
+        return data;
+    }
+
+    static async GetUserbyEmail(email: string) {
+
+
+        const data = await prisma.user.findUnique({
+            where: {
+                email: email
+            }
+        })
+        return data
+    }
+
+    static async EncodeUser(email: string, id: string) {
+        const token = jwt.sign({ email: email, id: id }, SECRET as string);
+        return token
+    }
+
+    static async DecodeUser(token: string) {
+        const decoded = jwt.verify(token, SECRET as string)
+        return decoded
+
+    }
+
+    static async GetUserbyid(userid: string) {
+        const data = await prisma.user.findUnique({
+            where: {
+                id: userid
+            },
+            include: {
+                location: true,
+                karma: true,
+
+            },
+            omit: {
+                password: true  ,
+                wallet_id: true,
+                Auth_type: true,
+                createdAt: true,
+                updateAt: true
+            }
+        })
+
+        return data;
+    }
+
+    static async GetOpenUser(email: string) {
+
+        const user = await prisma.user.findUnique({
+            where: {
+                email: email
+            },
+            omit: {
+                password: true,
+                wallet_id: true,
+                Auth_type: true
+            }
+        })
+        return user;
+    }
+
+
+    static async SendFriendRequest(senderId: string, reciverid: string, statustype: "Requested" | "Approved") {
+
+
+        const data = await prisma.friendRquest.create({
+            data: {
+                senderid: senderId,
+                reciverid: reciverid,
+                status: statustype
+            }
+        })
+        return data.id;
+    }
+
+    static async ApprovedRequest(senderId: string, reciverid: string) {
+        // Create the friendship first
+        await prisma.friend.create({
+            data: {
+                userid: senderId,
+                friendId: reciverid
+            }
+        })
+
+        await prisma.friend.create({
+            data: {
+                userid: reciverid,
+                friendId: senderId
+            }
+        })
+
+        // Delete the friend request after creating the friendship
+        await prisma.friendRquest.delete({
+            where: {
+                senderid_reciverid: {
+                    senderid: senderId,
+                    reciverid: reciverid
+                }
+            }
+        })
+
+        return true
+    }
+
+    static async RemoveFrined(senderId: string, reciverid: string) {
+        await prisma.friendRquest.delete({
+            where: {
+                senderid_reciverid: {
+                    senderid: senderId,
+                    reciverid: reciverid
+                }
+            }
+        })
+
+        await prisma.friend.delete({
+            where: {
+                userid_friendId: {
+                    userid: senderId,
+                    friendId: reciverid
+                }
+            }
+        })
+
+
+
+        await prisma.friend.delete({
+            where: {
+                userid_friendId: {
+                    userid: reciverid,
+                    friendId: senderId
+                }
+            }
+        })
+
+        return true
+    }
+
+    static async GetFriends(userid: string) {
+        const friends = await prisma.friend.findMany({
+            where: {
+                userid: userid
+            }
+        });
+
+        // Manually fetch user data for each friend
+        const friendsWithUserData = await Promise.all(
+            friends.map(async (friend) => {
+                const user = await prisma.user.findUnique({
+                    where: { id: friend.friendId },
+                    select: {
+                        id: true,
+                        Name: true,
+                        ImageUrl: true,
+                        email: true
+                    }
+                });
+                return {
+                    ...friend,
+                    user: user
+                };
+            })
+        );
+
+        return friendsWithUserData;
+    }
+
+
+    static async RequestFrineds(userid: string) {
+        // Requests sent TO the current user (they received them)
+        const data = await prisma.friendRquest.findMany({
+            where: {
+                reciverid: userid,
+                status: 'Requested'
+            },
+            include: {
+                sender: {
+                    select: {
+                        id: true,
+                        Name: true,
+                        ImageUrl: true,
+                        email: true
+                    }
+                }
+            }
+        })
+
+        return data
+    }
+
+    static async PendinFriends(userid: string) {
+        // Requests sent BY the current user (they are pending approval)
+        const data = await prisma.friendRquest.findMany({
+            where: {
+                senderid: userid,
+                status: 'Requested'
+            },
+            include: {
+                reciver: {
+                    select: {
+                        id: true,
+                        Name: true,
+                        ImageUrl: true,
+                        email: true
+                    }
+                }
+            }
+        })
+
+        return data;
+    }
+
+    static async Addlocation(userid: string, longitude: string, latitude: string) {
+
+        const data = await prisma.location.create({
+            data: {
+                userid: userid,
+                Longitude: longitude,
+                Latitude: latitude
+            }
+        })
+
+        return data.userid
+    }
+
+    static async UpdateLocation(userid: string, longitude: string, latitude: string) {
+
+        const data = await prisma.location.update({
+            where: {
+                userid: userid
+            },
+            data: {
+                Longitude: longitude,
+                Latitude: latitude
+            }
+        })
+
+        return data.userid
+    }
+
+    static async GetUserbyQuery(query: string) {
+        const users = await prisma.user.findMany({
+            where: {
+                Name: {
+                    contains: query, // partial match
+                    mode: 'insensitive', // ignore case
+                },
+            },
+        });
+
+        return users ; 
+    }
+
+    static async getUserbyid2(userid : string){
+        const user = await prisma.user.findUnique({
+            where : {
+                id : userid
+            }
+        })
+        return user ; 
+    }
+
+    static async CreateKarma(userid : string){
+        const karma = await prisma.karma.create({
+            data: {
+                userid: userid,
+                points: "0",
+                nfts: 0
+            }
+        })
+        return karma.userid;
+    }
+
+    static async UpdateKarma(userid : string, points : string){
+        const karma = await prisma.karma.update({
+            where: {
+                userid: userid
+            },
+            data: {
+                points: points
+            }
+        })
+        return karma.userid;
+    }
+
+    // Get friendship status between two users
+    static async getFriendshipStatus(currentUserId: string, targetUserId: string) {
+        try {
+            // Check if they are already friends
+            const friendship = await prisma.friend.findFirst({
+                where: {
+                    userid: currentUserId,
+                    friendId: targetUserId
+                }
+            });
+
+            if (friendship) {
+                return { status: 'friends' };
+            }
+
+            // Check if there's a pending request from current user to target user
+            const sentRequest = await prisma.friendRquest.findFirst({
+                where: {
+                    senderid: currentUserId,
+                    reciverid: targetUserId,
+                    status: 'Requested'
+                }
+            });
+
+            if (sentRequest) {
+                return { status: 'request_sent' };
+            }
+
+            // Check if there's a pending request from target user to current user
+            const receivedRequest = await prisma.friendRquest.findFirst({
+                where: {
+                    senderid: targetUserId,
+                    reciverid: currentUserId,
+                    status: 'Requested'
+                }
+            });
+
+            if (receivedRequest) {
+                return { status: 'request_received' };
+            }
+
+            return { status: 'none' };
+        } catch (error) {
+            console.error('Get friendship status error:', error);
+            throw new Error('Failed to get friendship status');
+        }
+    }
+
+    // Reject friend request
+    static async RejectRequest(senderId: string, receiverId: string) {
+        try {
+            await prisma.friendRquest.delete({
+                where: {
+                    senderid_reciverid: {
+                        senderid: senderId,
+                        reciverid: receiverId
+                    }
+                }
+            });
+            return true;
+        } catch (error) {
+            console.error('Reject request error:', error);
+            throw new Error('Failed to reject friend request');
+        }
+    }
+
+}
