@@ -61,7 +61,7 @@ model Friend {
   id String @id @unique @default(uuid())
   userid  String 
   friendId   String 
-  user     User @relation("FinalFriends"  , fields: [friendId]  , references: [id])
+  user     User @relation("FinalFriends"  , fields: [userid]  , references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

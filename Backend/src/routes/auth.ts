@@ -105,3 +105,41 @@ authrouter.get("/searchuser/:name" , async(req , res) =>{
         res.json({success : false })
     }
 })
+
+// Update user profile (name and/or imageUrl)
+authrouter.put("/update-profile", AuthMiddleware, async(req, res) => {
+    try {
+        // @ts-ignore
+        const userid = req.user?.id;
+        const { name, imageUrl } = req.body;
+        
+        
+        if (!userid) {
+            return res.json({ success: false, error: "User ID not found" });
+        }
+        
+        // Build update object with only provided fields
+        const updateData: any = {};
+        if (name !== undefined && name !== null) {
+            updateData.Name = name;
+        }
+        if (imageUrl !== undefined && imageUrl !== null) {
+            updateData.ImageUrl = imageUrl;
+        }
+        
+        if (Object.keys(updateData).length === 0) {
+            return res.json({ success: false, error: "No fields to update" });
+        }
+        
+        const updatedUser = await Authservice.UpdateUser(userid, updateData);
+        
+        res.json({ 
+            success: true, 
+            data: updatedUser,
+            message: "Profile updated successfully"
+        });
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.json({ success: false, error: error })
+    }
+})

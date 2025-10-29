@@ -6,34 +6,73 @@ import { Authservice } from "../Services/AuthService";
 import { PublicKey } from "@solana/web3.js";
 import { TransactionService } from "../Services/Transaction";
 import { KarmaService } from "../Services/KarmaService";
+import { prisma } from "../Singelton/index";
 
 export const tiprouter = Router();
 
 
 tiprouter.post("/tip-buzz", AuthMiddleware, async (req, res) => {
     try {
+        
         const { data, success } = TipBuzz.safeParse(req.body)
         if (!success) {
-            throw new Error("Invalid Credentials")
+            console.error("Invalid tip data:", data);
+            return res.json({ success: false, error: "Invalid tip data" })
         }
+
         const getTipperAccount = await Authservice.getUserbyid2(data.user.id)
         if (getTipperAccount == null) {
-            return res.json({ success: false })
+            console.error("Tipper account not found:", data.user.id);
+            return res.json({ success: false, error: "Tipper account not found" })
         }
-        let tipperAccountKey = new PublicKey(getTipperAccount?.public_key)
-        let recierAccount = new PublicKey(data.reciverPubkey)
 
-        if (data.Symbol == "SOL") {
-            await VoixContract.tipuser_sol(tipperAccountKey, recierAccount, data.amount, getTipperAccount.wallet_id)
-        } else {
-            await VoixContract.tipuser_spl(tipperAccountKey, recierAccount, data.amount, new PublicKey(data.Symbol), getTipperAccount.wallet_id)
+        const buzz = await prisma.buzz.findUnique({
+            where: { id: data.buzzid },
+            include: { user: { select: { public_key: true, Name: true } } }
+        });
+
+        if (!buzz) {
+            console.error("Buzz not found:", data.buzzid);
+            return res.json({ success: false, error: "Buzz not found" })
         }
-        await TransactionService.Creattip(data.user.id, data.buzzid, data.amount.toString(), data.Symbol)
+
+        if (!buzz.user.public_key) {
+            console.error("Buzz author has no public key");
+            return res.json({ success: false, error: "Buzz author has no wallet" })
+        }
+
+        let tipperAccountKey = new PublicKey(getTipperAccount.public_key)
+        let receiverAccount = new PublicKey(buzz.user.public_key)
 
 
-        res.json({ success: true, amount: data.amount })
+        let blockchainSuccess = false;
+        try {
+            if (data.Symbol == "SOL") {
+                blockchainSuccess = await VoixContract.tipuser_sol(tipperAccountKey, receiverAccount, data.amount, getTipperAccount.wallet_id);
+            } else {
+                const USDC_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"; // USDC on devnet
+                blockchainSuccess = await VoixContract.tipuser_spl(tipperAccountKey, receiverAccount, data.amount, new PublicKey(USDC_MINT), getTipperAccount.wallet_id);
+            }
+
+            if (!blockchainSuccess) {
+                throw new Error("Blockchain transaction failed");
+            }
+
+        } catch (blockchainError) {
+            console.error("Blockchain transaction failed:", blockchainError);
+            return res.json({ success: false, error: `Blockchain transaction failed: ${blockchainError instanceof Error ? blockchainError.message : String(blockchainError)}` });
+        }
+
+        try {
+            await TransactionService.Creattip(data.user.id, data.buzzid, data.amount.toString(), data.Symbol);
+        } catch (dbError) {
+            console.error("Failed to create transaction record:", dbError);
+        }
+
+        res.json({ success: true, amount: data.amount, message: `Tip of ${data.amount} ${data.Symbol} sent to ${buzz.user.Name}` })
     } catch (error) {
-        res.json({ success: false })
+        console.error("Tip buzz error:", error);
+        res.json({ success: false, error: (error as Error).message || "Failed to process tip" })
     }
 })
 

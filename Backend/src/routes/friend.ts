@@ -85,3 +85,31 @@ friendrouter.get("/requested", AuthMiddleware, async (req, res) => {
         res.json({ success: false, error: error })
     }
 })
+
+// Check friendship status between two users
+friendrouter.get("/status/:userId", AuthMiddleware, async (req, res) => {
+    try {
+        // @ts-ignore
+        const currentUserId = req.user.id;
+        const { userId } = req.params;
+        
+        const status = await Authservice.getFriendshipStatus(currentUserId, userId);
+        res.json({ success: true, data: status });
+    } catch (error) {
+        res.json({ success: false, error: error });
+    }
+})
+
+// Reject friend request
+friendrouter.post("/reject-request", AuthMiddleware, async (req, res) => {
+    try {
+        const { data, success } = ApprovedFriendRequest.safeParse(req.body);
+        if (!success) {
+            throw new Error("Invalid Credentials");
+        }
+        const response = await Authservice.RejectRequest(data.senderid, data.user.id);
+        res.json({ success: true, id: response });
+    } catch (error) {
+        res.json({ success: false, error: error });
+    }
+})

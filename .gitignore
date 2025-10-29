@@ -1,0 +1,26 @@
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Node
+node_modules/
+**/node_modules/
+
+# Rust build artifacts
+target/
+**/target/**
+
+# Rust analyzer transient outputs
+**/rust-analyzer/**
+
+# Logs
+*.log
+logs/
+
+# Env files
+.env
+.env.*
+
+

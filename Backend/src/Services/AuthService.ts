@@ -8,8 +8,7 @@ const SECRET = process.env.JWT_SECRET
 
 export class Authservice {
 
-
-    static async CreateUser(name: string, email: string, password: string | null, imageUrl: string | null, authtype: "Google" | "Password", walletid: string, publickey: string) {
+    static async CreateUser(name: string, email: string, password: string | null, imageUrl: string | undefined, authtype: "Google" | "Password", walletid: string, publickey: string) {
         try {
             const createdUser = await prisma.user.create({
                 data: {
@@ -19,6 +18,7 @@ export class Authservice {
                     wallet_id: walletid,
                     public_key: publickey,
                     Auth_type: authtype,
+                    ImageUrl: imageUrl ? imageUrl : "https://static.vecteezy.com/system/resources/thumbnails/020/765/399/small_2x/default-profile-account-unknown-icon-black-silhouette-free-vector.jpg",
                 }
             })
 
@@ -28,6 +28,26 @@ export class Authservice {
             throw new Error("Something went wrong in Database")
         }
 
+    }
+
+    static async UpdateUser(userid: string, updateData: { Name?: string, ImageUrl?: string }) {
+        const data = await prisma.user.update({
+            where: {
+                id: userid
+            },
+            data: updateData,
+            select: {
+                id: true,
+                Name: true,
+                ImageUrl: true,
+                email: true,
+                public_key: true,
+                wallet_id: true,
+                Auth_type: true,
+                createdAt: true
+            }
+        })
+        return data;
     }
 
     static async GetUserbyEmail(email: string) {
@@ -100,19 +120,7 @@ export class Authservice {
     }
 
     static async ApprovedRequest(senderId: string, reciverid: string) {
-
-        await prisma.friendRquest.update({
-            where: {
-                senderid_reciverid: {
-                    senderid: senderId,
-                    reciverid: reciverid
-                }
-            },
-            data: {
-                status: "Approved"
-            }
-        })
-
+        // Create the friendship first
         await prisma.friend.create({
             data: {
                 userid: senderId,
@@ -124,6 +132,16 @@ export class Authservice {
             data: {
                 userid: reciverid,
                 friendId: senderId
+            }
+        })
+
+        // Delete the friend request after creating the friendship
+        await prisma.friendRquest.delete({
+            where: {
+                senderid_reciverid: {
+                    senderid: senderId,
+                    reciverid: reciverid
+                }
             }
         })
 
@@ -164,20 +182,51 @@ export class Authservice {
     }
 
     static async GetFriends(userid: string) {
-        const data = await prisma.friend.findMany({
+        const friends = await prisma.friend.findMany({
             where: {
                 userid: userid
             }
-        })
+        });
 
-        return data;
+        // Manually fetch user data for each friend
+        const friendsWithUserData = await Promise.all(
+            friends.map(async (friend) => {
+                const user = await prisma.user.findUnique({
+                    where: { id: friend.friendId },
+                    select: {
+                        id: true,
+                        Name: true,
+                        ImageUrl: true,
+                        email: true
+                    }
+                });
+                return {
+                    ...friend,
+                    user: user
+                };
+            })
+        );
+
+        return friendsWithUserData;
     }
 
 
     static async RequestFrineds(userid: string) {
+        // Requests sent TO the current user (they received them)
         const data = await prisma.friendRquest.findMany({
             where: {
-                reciverid: userid
+                reciverid: userid,
+                status: 'Requested'
+            },
+            include: {
+                sender: {
+                    select: {
+                        id: true,
+                        Name: true,
+                        ImageUrl: true,
+                        email: true
+                    }
+                }
             }
         })
 
@@ -185,9 +234,21 @@ export class Authservice {
     }
 
     static async PendinFriends(userid: string) {
+        // Requests sent BY the current user (they are pending approval)
         const data = await prisma.friendRquest.findMany({
             where: {
-                senderid: userid
+                senderid: userid,
+                status: 'Requested'
+            },
+            include: {
+                reciver: {
+                    select: {
+                        id: true,
+                        Name: true,
+                        ImageUrl: true,
+                        email: true
+                    }
+                }
             }
         })
 
@@ -267,5 +328,70 @@ export class Authservice {
         return karma.userid;
     }
 
+    // Get friendship status between two users
+    static async getFriendshipStatus(currentUserId: string, targetUserId: string) {
+        try {
+            // Check if they are already friends
+            const friendship = await prisma.friend.findFirst({
+                where: {
+                    userid: currentUserId,
+                    friendId: targetUserId
+                }
+            });
+
+            if (friendship) {
+                return { status: 'friends' };
+            }
+
+            // Check if there's a pending request from current user to target user
+            const sentRequest = await prisma.friendRquest.findFirst({
+                where: {
+                    senderid: currentUserId,
+                    reciverid: targetUserId,
+                    status: 'Requested'
+                }
+            });
+
+            if (sentRequest) {
+                return { status: 'request_sent' };
+            }
+
+            // Check if there's a pending request from target user to current user
+            const receivedRequest = await prisma.friendRquest.findFirst({
+                where: {
+                    senderid: targetUserId,
+                    reciverid: currentUserId,
+                    status: 'Requested'
+                }
+            });
+
+            if (receivedRequest) {
+                return { status: 'request_received' };
+            }
+
+            return { status: 'none' };
+        } catch (error) {
+            console.error('Get friendship status error:', error);
+            throw new Error('Failed to get friendship status');
+        }
+    }
+
+    // Reject friend request
+    static async RejectRequest(senderId: string, receiverId: string) {
+        try {
+            await prisma.friendRquest.delete({
+                where: {
+                    senderid_reciverid: {
+                        senderid: senderId,
+                        reciverid: receiverId
+                    }
+                }
+            });
+            return true;
+        } catch (error) {
+            console.error('Reject request error:', error);
+            throw new Error('Failed to reject friend request');
+        }
+    }
 
 }

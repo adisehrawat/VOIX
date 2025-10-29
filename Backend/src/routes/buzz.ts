@@ -72,6 +72,17 @@ buzzrouter.get("/buzz/:pagenumber"  , async(req ,res) =>{
     }
 })
 
+// Get single buzz by ID
+buzzrouter.get("/single/:buzzid"  , async(req ,res) =>{
+    try {
+        const buzzid = req.params.buzzid ; 
+        const data = await BuzzService.GetBuzzById(buzzid)
+        res.json({success : true , data : data})
+    } catch (error) {
+        res.json({success : false , error : error })
+    }
+})
+
 
 buzzrouter.get("/buzzcomment/:buzzid"  , async(req , res)=>{
     try {
@@ -105,5 +116,44 @@ buzzrouter.get("/followingbuzz/:pagenumber"  , AuthMiddleware , async(req , res)
         res.json({success : true , data : data})
     } catch (error) {
         res.json({success : false , error : error })
+    }
+})
+
+// Get user's replies/comments (for profile replies tab)
+// IMPORTANT: This must come BEFORE /user/:userid/:pagenumber to avoid route collision
+buzzrouter.get("/user/replies/:userid/:pagenumber"  , async(req , res)=>{
+    try {
+        const userid = req.params.userid
+        const pagenumber = req.params.pagenumber
+        const data = await BuzzService.GetUserReplies(userid, parseInt(pagenumber))
+        res.json({success : true , data : data})
+    } catch (error) {
+        console.error('Error fetching user replies:', error);
+        res.json({success : false , error : error })
+    }
+})
+
+// Get buzzes for a specific user (for profile page)
+buzzrouter.get("/user/:userid/:pagenumber"  , async(req , res)=>{
+    try {
+        const userid = req.params.userid
+        const pagenumber = req.params.pagenumber
+        const data = await BuzzService.GetUserBuzzes(userid, parseInt(pagenumber))
+        res.json({success : true , data : data})
+    } catch (error) {
+        res.json({success : false , error : error })
+    }
+})
+
+// Activity: recent likes on current user's buzzes
+buzzrouter.get("/activity/likes", AuthMiddleware, async (req, res) => {
+    try {
+        // @ts-ignore
+        const userid = req.user.id;
+        const page = parseInt(req.query.page as string) || 1;
+        const data = await BuzzService.GetRecentLikesForUser(userid, page);
+        res.json({ success: true, data });
+    } catch (error) {
+        res.json({ success: false, error: error });
     }
 })
