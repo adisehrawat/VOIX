@@ -15,14 +15,12 @@ interface UserProfile {
   email: string;
   public_key: string;
   createdAt: string;
-  stats: {
-    posts: number;
-    friends: number;
-  };
   karma: {
-    points: number;
     nfts: number;
-  };
+    points: string;
+  }[];
+  Friends: { id: string }[]; // Define proper friend interface if needed
+  buzz: { id: string }[]; // Define proper buzz interface if needed
 }
 
 type FriendshipStatus = 'none' | 'friends' | 'request_sent' | 'request_received';
@@ -42,8 +40,10 @@ export default function UserProfileScreen() {
     if (!id || typeof id !== 'string') return;
 
     try {
+      console.log('Loading user profile:', id);
       setLoading(true);
       const response = await searchAPI.getUserProfile(id);
+      console.log('User profile response:', response);
       
       if (response.success && response.data) {
         setProfile(response.data);
@@ -252,7 +252,7 @@ export default function UserProfileScreen() {
                 source={{ uri: profile.ImageUrl }}
                 className="w-20 h-20 rounded-full"
               />
-              {profile.karma.nfts > 0 && (
+              {profile.karma[0].nfts > 0 && (
                 <View className="absolute bottom-0 right-0 w-7 h-7 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full border-2 border-black items-center justify-center">
                   <Text className="text-xs">🏆</Text>
                 </View>
@@ -265,7 +265,7 @@ export default function UserProfileScreen() {
               <View className="flex-row items-center bg-purple-500/20 px-2 py-1 rounded-full border border-purple-500/30 mt-1 self-start">
                 <Zap size={12} color="#a855f7" strokeWidth={2.5} fill="#a855f7" />
                 <Text className="text-purple-500 font-semibold text-xs ml-1">
-                  {profile.karma.points} Karma
+                  {profile.karma[0].points} Karma
                 </Text>
               </View>
             </View>
@@ -275,11 +275,11 @@ export default function UserProfileScreen() {
         {/* Stats */}
         <View className="flex-row justify-around mb-4">
           <View className="items-center">
-            <Text className="text-white text-lg font-bold">{profile.stats.posts}</Text>
+            <Text className="text-white text-lg font-bold">{profile.buzz.length}</Text>
             <Text className="text-gray-400 text-sm">posts</Text>
           </View>
           <View className="items-center">
-            <Text className="text-white text-lg font-bold">{profile.stats.friends}</Text>
+            <Text className="text-white text-lg font-bold">{profile.Friends.length}</Text>
             <Text className="text-gray-400 text-sm">friends</Text>
           </View>
         </View>

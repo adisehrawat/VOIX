@@ -1,12 +1,12 @@
 import React, { createContext, useState, useContext, useCallback, ReactNode } from 'react';
-import { buzzAPI, BuzzData } from '../services/api';
+import { buzzAPI, BuzzData, BuzzData2 } from '../services/api';
 
 interface BuzzContextType {
   buzzCache: Map<number, BuzzData[]>;
   buzzDetailCache: Map<string, BuzzData>;
   loading: boolean;
   getBuzzes: (page: number, forceRefresh?: boolean) => Promise<BuzzData[]>;
-  getBuzzById: (buzzId: string, forceRefresh?: boolean) => Promise<BuzzData | null>;
+  getBuzzById: (buzzId: string, forceRefresh?: boolean) => Promise<BuzzData2 | null>;
   getUserBuzzes: (userId: string, page: number, forceRefresh?: boolean) => Promise<BuzzData[]>;
   getUserReplies: (userId: string, page: number, forceRefresh?: boolean) => Promise<BuzzData[]>;
   updateBuzzInCache: (buzzId: string, updatedBuzz: Partial<BuzzData>) => void;
@@ -66,9 +66,9 @@ export const BuzzProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [buzzCache]);
 
-  const getBuzzById = useCallback(async (buzzId: string, forceRefresh: boolean = false): Promise<BuzzData | null> => {
+  const getBuzzById = useCallback(async (buzzId: string, forceRefresh: boolean = false): Promise<BuzzData2 | null> => {
     if (!forceRefresh && buzzDetailCache.has(buzzId)) {
-      return buzzDetailCache.get(buzzId)!;
+      return buzzDetailCache.get(buzzId) as unknown as BuzzData2 | null;
     }
 
     try {

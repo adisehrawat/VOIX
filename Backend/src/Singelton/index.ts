@@ -16,7 +16,7 @@ export const connection = new Connection("https://api.devnet.solana.com");
 
 const loadKeypair = (): Keypair => {
   try {
-    const secret = JSON.parse(fs.readFileSync("./src/admin_key.json", "utf-8"));
+    const secret = JSON.parse(fs.readFileSync("./admin_key.json", "utf-8"));
     return Keypair.fromSecretKey(new Uint8Array(secret));
   } catch (error) {
     console.error("Failed to load keypair:", error);

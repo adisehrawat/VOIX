@@ -9,7 +9,7 @@
 // IMPORTANT: Must include /api/v1 at the end!
 
 export const API_BASE_URL = __DEV__ 
-  ? 'http://10.0.2.2:3000/api/v1' // Android Emulator
+  ? 'http://192.168.31.251:3000/api/v1' // Android Emulator
   : 'https://your-production-api.com/api/v1';
 
 // AsyncStorage Keys

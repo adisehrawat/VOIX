@@ -39,7 +39,7 @@ app.get("/health"  ,   (req, res)=>{
 
 
 
-app.listen(PORT , ()=>{
+app.listen(PORT as any, '0.0.0.0' , ()=>{
 
     console.log(`Server is listening on PORT : ${PORT}`)
 })

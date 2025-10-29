@@ -83,7 +83,11 @@ export class Authservice {
 
             },
             omit: {
-                password: true
+                password: true  ,
+                wallet_id: true,
+                Auth_type: true,
+                createdAt: true,
+                updateAt: true
             }
         })
 

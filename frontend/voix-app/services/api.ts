@@ -476,6 +476,31 @@ export interface BuzzData {
   updatedAt: string;
 }
 
+
+export interface BuzzData2 {
+  id: string;
+  parentBuzzId: string | null;
+  content: string;
+  image: string;
+  userid: string;
+  parentId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    Name: string;
+    email: string;
+    ImageUrl: string;
+    public_key: string;
+  };
+  Vote: {
+    type: 'UpVote' | 'DownVote';
+    userid: string;
+  }[];
+  Tip: any[]; // Define proper tip interface if needed
+  parentBuzz: any[]; // Define proper parent buzz interface if needed
+}
+
 export interface UserData {
   id: string;
   Name: string;
@@ -578,7 +603,7 @@ export const searchAPI = {
   },
   
   getUserProfile: async (identifier: string) => {
-    return apiCall(`/search/user/${encodeURIComponent(identifier)}`, 'GET');
+    return apiCall(`/auth/userprofile/${encodeURIComponent(identifier)}`, 'GET');
   }
 };
 

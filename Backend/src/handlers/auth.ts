@@ -10,7 +10,6 @@ export async function CreateUserPassword(name : string , email : string , passwo
     const data = await Authservice.CreateUser(name  , email , password , imageUrl?imageUrl : undefined , "Password" , id , address)
 
     const userid = await Authservice.CreateKarma(data.id)
-    await VoixContract.Intialize_user(new PublicKey(address))
 
     await VoixContract.Intialize_user(new PublicKey(address))
     await VoixContract.Set_new_karma(new PublicKey(address) , 0)

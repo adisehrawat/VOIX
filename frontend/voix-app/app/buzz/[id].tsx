@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../../config/constants';
 import EnhancedTipModal from '../../components/tips/EnhancedTipModal';
-import { buzzAPI, BuzzData } from '../../services/api';
+import { buzzAPI, BuzzData, BuzzData2 } from '../../services/api';
 import { useBuzz } from '../../contexts/BuzzContext';
 import { useProfile } from '../../contexts/ProfileContext';
 
@@ -117,7 +117,7 @@ export default function BuzzDetail() {
   const { refreshProfile } = useProfile();
   const [commentText, setCommentText] = useState('');
   const [showTipModal, setShowTipModal] = useState(false);
-  const [buzz, setBuzz] = useState<BuzzData | null>(null);
+  const [buzz, setBuzz] = useState<BuzzData2 | null>(null);
   const [comments, setComments] = useState<CommentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
@@ -159,6 +159,7 @@ export default function BuzzDetail() {
       const buzzData = await getBuzzById(id as string, !buzz); // Force refresh only on first load
       
       if (buzzData) {
+        console.log('Buzz data:', buzzData);
         setBuzz(buzzData);
         console.log('Buzz loaded successfully from context');
       } else {
@@ -308,7 +309,7 @@ export default function BuzzDetail() {
 
   const upvotes = buzz.Vote?.filter(v => v.type === 'UpVote').length || 0;
   const downvotes = buzz.Vote?.filter(v => v.type === 'DownVote').length || 0;
-  const totalTips = buzz.tips?.length || 0;
+  const totalTips = buzz.Tip?.length || 0;
 
   const renderHeader = () => (
     <>

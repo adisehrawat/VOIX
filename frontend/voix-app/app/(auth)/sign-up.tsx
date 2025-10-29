@@ -39,12 +39,15 @@ const SignUp = () => {
         setLoading(true);
         try {
             const response = await authAPI.signUp(name, mail, password);
-            
+
             if (response.success && response.token) {
                 await signIn(response.token);
                 router.replace('/(tabs)');
             } else {
-                Alert.alert('Error', response.error || 'Failed to create account');
+                const errorMessage = typeof response?.error === 'string'
+                  ? response.error
+                  : (response?.error?.message ?? JSON.stringify(response?.error ?? {}));
+                Alert.alert('Error', errorMessage || 'Failed to create account');
             }
         } catch (error) {
             console.error('Sign up error:', error);

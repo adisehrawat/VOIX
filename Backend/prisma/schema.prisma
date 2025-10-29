@@ -17,7 +17,7 @@ datasource db {
 }
 
 model User {
-  id         String @unique @default(uuid())
+  id         String @unique @default(uuid()) @id
   Name       String  
   ImageUrl    String @default("https://static.vecteezy.com/system/resources/thumbnails/020/765/399/small_2x/default-profile-account-unknown-icon-black-silhouette-free-vector.jpg")
   email      String @unique
@@ -44,7 +44,7 @@ model User {
 
 
 model FriendRquest {
-  id String @default(uuid()) @unique
+  id String @default(uuid()) @unique  @id
   senderid  String 
   sender    User @relation("Usersender"  , fields: [senderid]  , references: [id])
   reciverid   String 
@@ -58,7 +58,7 @@ model FriendRquest {
 }
 
 model Friend {
-  id String @id @unique @default(uuid())
+  id String @id @unique @default(uuid())  
   userid  String 
   friendId   String 
   user     User @relation("FinalFriends"  , fields: [userid]  , references: [id])

@@ -2,6 +2,7 @@ import  express from "express"
 import { AuthMiddleware } from "../middlewares";
 import {CreatComment , CreateBuzz , CreateVote}  from "../Services/Zschema"
 import { BuzzService } from "../Services/BuzzService";
+import { SupabaseService } from "../Services/SupabaseService";
 
 export const buzzrouter = express.Router() ; 
 
@@ -76,9 +77,10 @@ buzzrouter.get("/buzz/:pagenumber"  , async(req ,res) =>{
 buzzrouter.get("/single/:buzzid"  , async(req ,res) =>{
     try {
         const buzzid = req.params.buzzid ; 
-        const data = await BuzzService.GetBuzzById(buzzid)
+        const data = await SupabaseService.getBuzzbyId(buzzid)
         res.json({success : true , data : data})
     } catch (error) {
+        console.log(error)
         res.json({success : false , error : error })
     }
 })

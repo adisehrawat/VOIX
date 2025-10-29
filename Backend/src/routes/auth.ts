@@ -5,6 +5,7 @@ import { AuthMiddleware } from "../middlewares";
 import { AddLocationSchema, UpdateLocation } from "../Services/Zschema";
 import { Authservice } from "../Services/AuthService";
 import { VoixContract } from "../Services/Smartcontrac";
+import { SupabaseService } from "../Services/SupabaseService";
 
 export const authrouter = express.Router();
 
@@ -22,6 +23,7 @@ authrouter.post("/signup", async (req, res) => {
             res.json({ success: true, token: token })
         }
     } catch (error) {
+        console.log(error)
         res.json({ success: false, error: error })
     }
 })
@@ -141,5 +143,17 @@ authrouter.put("/update-profile", AuthMiddleware, async(req, res) => {
     } catch (error) {
         console.error('Update profile error:', error);
         res.json({ success: false, error: error })
+    }
+})
+
+
+
+authrouter.get("/userprofile/:id" , async(req , res) =>{
+    try {
+        const id = req.params.id ; 
+        const data = await SupabaseService.getUserProfile(id)
+        res.json({success : true , data : data})
+    } catch (error) {
+        res.json({success : false })
     }
 })
