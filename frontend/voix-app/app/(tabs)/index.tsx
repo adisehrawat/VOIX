@@ -3,7 +3,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { MessageCircle } from "lucide-react-native";
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+
 import BuzzCard from "../../components/BuzzCard";
 import { BuzzData } from "../../services/api";
 import { useBuzz } from "../../contexts/BuzzContext";
@@ -153,8 +153,7 @@ export default function Index() {
   if (!fontsLoaded) return null;
 
   return (
-    <SafeAreaView className="flex-1 bg-black">
-      {/* Header */}
+    <View className="flex-1 bg-black">  {/* Header */}
       <View className="flex-row items-center justify-between px-6 py-4 border-b border-zinc-900">
         <Text 
           className="text-white text-5xl"
@@ -195,6 +194,6 @@ export default function Index() {
           />
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }

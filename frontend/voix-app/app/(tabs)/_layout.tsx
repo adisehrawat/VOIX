@@ -2,6 +2,7 @@ import { router, Tabs } from 'expo-router';
 import { Bell, Home, Plus, Search, User } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 function CustomTabBar({ state, descriptors, navigation }: { state: any, descriptors: any, navigation: any }) {
   const tabWidth = 64;
@@ -142,6 +143,7 @@ function CustomTabBar({ state, descriptors, navigation }: { state: any, descript
 
 export default function TabLayout() {
   return (
+    <SafeAreaView className="flex-1 bg-black">
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
@@ -170,8 +172,9 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
-        }}
-      />
-    </Tabs>
+          }}
+        />
+      </Tabs>
+    </SafeAreaView>
   );
 }
