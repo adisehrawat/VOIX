@@ -9,14 +9,10 @@
 // IMPORTANT: Must include /api/v1 at the end!
 
 export const API_BASE_URL = __DEV__ 
-<<<<<<< Updated upstream
-  ? 'http://192.168.31.251:3000/api/v1' // Android Emulator
+  ? 'http://172.20.189.108:3000/api/v1' // Android Emulator
+    // ? 'http://20.0.0.105:3000/api/v1' // Local Development
   : 'https://your-production-api.com/api/v1';
-=======
-  ? 'http://10.0.2.2:3000/api/v1' // Android Emulator
-//   ? 'http://127.0.0.1:3000/api/v1' // Local Development
-  : 'https://your-actual-backend-url.com/api/v1'; // Replace with your actual backend URL
->>>>>>> Stashed changes
+
 
 // AsyncStorage Keys
 export const STORAGE_KEYS = {

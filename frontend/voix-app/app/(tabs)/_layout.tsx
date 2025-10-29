@@ -40,7 +40,6 @@ function CustomTabBar({ state, descriptors, navigation }: { state: any, descript
 
   return (
     <>
-      {/* Create Buzz Button */}
       <View className="absolute bottom-32 right-8">
         <TouchableOpacity
           onPress={handleCreateBuzz}
@@ -59,7 +58,7 @@ function CustomTabBar({ state, descriptors, navigation }: { state: any, descript
       </View>
 
       {/* Tab Bar */}
-      <View className="absolute bottom-8 left-0 right-0 items-center">
+      <View className="absolute bottom-5 left-0 right-0 items-center">
         <View 
           onLayout={handleLayout}
           className="bg-zinc-900 rounded-full px-4 py-3 flex-row items-center justify-between border border-zinc-800 mx-10 relative" 

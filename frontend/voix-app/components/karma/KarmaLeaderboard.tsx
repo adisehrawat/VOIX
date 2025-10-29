@@ -60,12 +60,12 @@ const LeaderboardCard = ({
 
         {/* User Info */}
         <Image
-          source={{ uri: karma.user.imageUrl }}
+          source={{ uri: karma.user.imageUrl || karma.user.ImageUrl }}
           className="w-12 h-12 rounded-full mr-3"
         />
         <View className="flex-1">
           <Text className="text-white font-semibold text-base">
-            {karma.user.name}
+            {karma.user.name || karma.user.Name}
             {isCurrentUser && (
               <Text className="text-purple-500 text-sm"> (You)</Text>
             )}
@@ -106,13 +106,13 @@ export default function KarmaLeaderboard({ leaderboard, currentUserId }: KarmaLe
   return (
     <FlatList
       data={leaderboard}
-      keyExtractor={(item) => item.userId}
+      keyExtractor={(item, index) => item.userid || item.user?.id || `karma-${index}`}
       ListHeaderComponent={renderHeader}
       renderItem={({ item, index }) => (
         <LeaderboardCard
           karma={item}
           rank={index + 1}
-          isCurrentUser={item.userId === currentUserId}
+          isCurrentUser={(item.userid || item.user?.id) === currentUserId}
         />
       )}
       contentContainerStyle={{ padding: 16, paddingBottom: 100 }}

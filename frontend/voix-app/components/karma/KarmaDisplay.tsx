@@ -10,8 +10,7 @@ interface KarmaDisplayProps {
 
 export default function KarmaDisplay({ points, nfts, rank, trend = 'stable' }: KarmaDisplayProps) {
   return (
-    <View className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-3xl p-6 mx-4 mb-6">
-      {/* Header */}
+    <View className="bg-zinc-800 rounded-3xl p-6 mx-4 mb-6 border border-zinc-700">
       <View className="flex-row items-center justify-between mb-4">
         <View className="flex-row items-center">
           <View className="w-10 h-10 bg-white/20 rounded-full items-center justify-center mr-2">
@@ -19,16 +18,8 @@ export default function KarmaDisplay({ points, nfts, rank, trend = 'stable' }: K
           </View>
           <Text className="text-white text-lg font-bold">Karma Points</Text>
         </View>
-        {rank && (
-          <View className="bg-white/20 px-3 py-1.5 rounded-full">
-            <Text className="text-white text-xs font-semibold">
-              Rank #{rank}
-            </Text>
-          </View>
-        )}
+        <Text className="text-white text-sm font-bold">Rank: {rank}</Text>
       </View>
-
-      {/* Points */}
       <View className="flex-row items-end mb-6">
         <Text className="text-white text-5xl font-bold">{points}</Text>
         {trend === 'up' && (
@@ -37,10 +28,7 @@ export default function KarmaDisplay({ points, nfts, rank, trend = 'stable' }: K
           </View>
         )}
       </View>
-
-      {/* Stats */}
       <View className="flex-row gap-3">
-        {/* NFTs */}
         <View className="flex-1 bg-white/10 rounded-2xl p-4 border border-white/20">
           <View className="flex-row items-center mb-2">
             <Award size={16} color="#fff" strokeWidth={2} />
@@ -48,8 +36,6 @@ export default function KarmaDisplay({ points, nfts, rank, trend = 'stable' }: K
           </View>
           <Text className="text-white text-2xl font-bold">{nfts}</Text>
         </View>
-
-        {/* Level */}
         <View className="flex-1 bg-white/10 rounded-2xl p-4 border border-white/20">
           <View className="flex-row items-center mb-2">
             <Zap size={16} color="#fff" strokeWidth={2} fill="#fff" />
@@ -60,8 +46,6 @@ export default function KarmaDisplay({ points, nfts, rank, trend = 'stable' }: K
           </Text>
         </View>
       </View>
-
-      {/* Progress Bar */}
       <View className="mt-4">
         <View className="flex-row justify-between mb-2">
           <Text className="text-white/80 text-xs">Next Level</Text>
@@ -79,4 +63,3 @@ export default function KarmaDisplay({ points, nfts, rank, trend = 'stable' }: K
     </View>
   );
 }
-

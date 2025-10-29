@@ -1,4 +1,4 @@
-import { Coins, Globe, LogOut, Settings, User as UserIcon, Wallet, Zap } from 'lucide-react-native';
+import { LogOut, Settings, User as UserIcon, Wallet, Zap } from 'lucide-react-native';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
@@ -47,14 +47,6 @@ export default function UserSettings({ onNavigate }: UserSettingsProps) {
       onPress: () => onNavigate('edit-profile'),
     },
     {
-      id: 'location',
-      title: 'Location Settings',
-      description: 'Manage location preferences',
-      icon: Globe,
-      color: '#22c55e',
-      onPress: () => onNavigate('location'),
-    },
-    {
       id: 'wallet',
       title: 'Wallet',
       description: 'View balance and transactions',
@@ -70,14 +62,14 @@ export default function UserSettings({ onNavigate }: UserSettingsProps) {
       color: '#a855f7',
       onPress: () => router.push('/karma'),
     },
-    {
-      id: 'tips',
-      title: 'Tips',
-      description: 'View tip history and analytics',
-      icon: Coins,
-      color: '#f97316',
-      onPress: () => router.push('/tips'),
-    },
+    // {
+    //   id: 'tips',
+    //   title: 'Tips',
+    //   description: 'View tip history and analytics',
+    //   icon: Coins,
+    //   color: '#f97316',
+    //   onPress: () => router.push('/tips'),
+    // },
   ];
 
   return (

@@ -27,12 +27,10 @@ const SignUp = () => {
         }
 
         if (name.length < 3) {
-            Alert.alert('Error', 'Name must be at least 3 characters');
             return;
         }
 
         if (password.length < 8) {
-            Alert.alert('Error', 'Password must be at least 8 characters');
             return;
         }
 
@@ -51,7 +49,6 @@ const SignUp = () => {
             }
         } catch (error) {
             console.error('Sign up error:', error);
-            Alert.alert('Error', 'Something went wrong. Please try again.');
         } finally {
             setLoading(false);
         }

@@ -1,6 +1,6 @@
 import { Camera, Save } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { authAPI } from '../../services/api';
 import { useProfile } from '../../contexts/ProfileContext';
@@ -27,7 +27,6 @@ export default function EditProfile({ user, onSave }: EditProfileProps) {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'We need camera roll permissions to change your profile picture.');
         return;
       }
 
@@ -56,7 +55,6 @@ export default function EditProfile({ user, onSave }: EditProfileProps) {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
     } finally {
       setImageLoading(false);
     }
@@ -79,20 +77,13 @@ export default function EditProfile({ user, onSave }: EditProfileProps) {
 
       // Check if anything changed
       if (Object.keys(updateData).length === 0) {
-        Alert.alert('No Changes', 'No fields were modified');
         return;
       }
-
-      console.log('Updating profile with:', { 
-        hasName: !!updateData.name, 
-        hasImageUrl: !!updateData.imageUrl 
-      });
 
       // Call API
       const response = await authAPI.updateProfile(updateData);
 
       if (response.success) {
-        Alert.alert('Success', 'Profile updated successfully');
         
         // Refresh profile data in context
         await refreshProfile();
@@ -100,11 +91,9 @@ export default function EditProfile({ user, onSave }: EditProfileProps) {
         // Go back
         onSave();
       } else {
-        Alert.alert('Error', response.error || 'Failed to update profile');
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      Alert.alert('Error', 'Failed to update profile');
     } finally {
       setLoading(false);
     }

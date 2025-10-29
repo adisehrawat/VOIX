@@ -4,7 +4,6 @@ import { ArrowLeft } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import LocationSettings from '../components/location/LocationSettings';
 import EditProfile from '../components/settings/EditProfile';
 import UserSettings from '../components/settings/UserSettings';
 import { useProfile } from '../contexts/ProfileContext';
@@ -97,10 +96,6 @@ export default function Settings() {
             }}
             onSave={handleSaveProfile} 
           />
-        )}
-
-        {currentScreen === 'location' && (
-          <LocationSettings onSettingsChange={handleLocationSettingsChange} />
         )}
       </ScrollView>
     </SafeAreaView>

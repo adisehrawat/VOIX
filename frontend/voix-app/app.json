@@ -3,6 +3,7 @@
     "name": "voix-app",
     "slug": "voix-app",
     "version": "1.0.0",
+    "owner": "hackmeplease",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "voixapp",
@@ -32,7 +33,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.hackmeplease.voixapp"
     },
     "web": {
       "output": "static",
@@ -58,6 +60,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "5a65e46e-cc73-4ecd-897a-b618dd93330a"
+      }
     }
   }
 }

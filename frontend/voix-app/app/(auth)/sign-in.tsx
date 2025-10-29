@@ -21,7 +21,6 @@ const SignIn = () => {
 
     const handleSignIn = async () => {
         if (!mail || !password) {
-            Alert.alert('Error', 'Please fill in all fields');
             return;
         }
 
@@ -33,11 +32,9 @@ const SignIn = () => {
                 await signIn(response.token);
                 router.replace('/(tabs)');
             } else {
-                Alert.alert('Error', response.error || 'Invalid credentials');
             }
         } catch (error) {
             console.error('Sign in error:', error);
-            Alert.alert('Error', 'Something went wrong. Please try again.');
         } finally {
             setLoading(false);
         }

@@ -17,7 +17,11 @@ const app = express() ;
 const PORT = process.env.PORT
 
 // Enable CORS for all origins (for development)
-app.use(cors())
+app.use(cors({
+    origin: "*",
+    credentials: true,
+}
+))
 
 // Parse JSON bodies
 app.use(express.json())

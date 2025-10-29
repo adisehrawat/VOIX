@@ -9,7 +9,6 @@ const Supabase = createClient('https://wpgvdsptmsxhxhdmbpff.supabase.co', anon_k
 export class SupabaseService {
 
 
-
     static async getBuzzbyId(id: string) {
         const { data, error } = await Supabase.from('Buzz').select(`*,
             user:User(id , Name ,ImageUrl , email , public_key),

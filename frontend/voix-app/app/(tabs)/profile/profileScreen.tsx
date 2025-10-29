@@ -4,7 +4,6 @@ import { router } from 'expo-router';
 import { ArrowLeftRight, Grid3x3, MessageCircle, Settings, UserPlus } from 'lucide-react-native';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FlatList, Text, TouchableOpacity, View, ActivityIndicator, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import ProfileHeader from '../../../components/pages/profile/ProfileHeader';
 import BuzzCard from '../../../components/BuzzCard';
 import ReplyCard from '../../../components/ReplyCard';
@@ -12,7 +11,7 @@ import TransactionCard from '../../../components/transactions/TransactionCard';
 import { useProfile } from '../../../contexts/ProfileContext';
 import { useBuzz } from '../../../contexts/BuzzContext';
 import { useWallet } from '../../../contexts/WalletContext';
-import { BuzzData, walletAPI } from '../../../services/api';
+import { BuzzData, walletAPI, tipAPI } from '../../../services/api';
 
 type TabType = 'buzzes' | 'replies' | 'transactions';
 
@@ -44,6 +43,7 @@ export default function Profile() {
   const [transactionPage, setTransactionPage] = useState(1);
   const [transactionHasMore, setTransactionHasMore] = useState(true);
   const [transactionInitialLoad, setTransactionInitialLoad] = useState(true);
+  const [mintLoading, setMintLoading] = useState(false);
   useEffect(() => {
     if (!userData?.id) return;
     
@@ -74,7 +74,7 @@ export default function Profile() {
           loadTransactions(1, true);
         }
       }
-    }, [initialLoad, userData?.id, activeTab])
+    }, [initialLoad, userData?.id, activeTab, refreshProfile])
   );
 
   const loadUserBuzzes = useCallback(async (pageNum: number, isRefresh: boolean = false) => {
@@ -226,6 +226,35 @@ export default function Profile() {
 
   const tipStats = calculateTipStats();
 
+  const karmaPoints = karmaData ? parseInt(karmaData.points) : 0;
+
+  const getMintTier = () => {
+    if (karmaPoints > 10000 && karmaData?.nfts === 2) return { tier: 'gold' as const, label: 'Mint Gold NFT', color: '#f59e0b' };
+    if (karmaPoints >= 5000 && karmaPoints < 10000 && karmaData?.nfts === 1) return { tier: 'silver' as const, label: 'Mint Silver NFT', color: '#9ca3af' };
+    if (karmaPoints >= 1000 && karmaPoints < 5000 && karmaData?.nfts === 0) return { tier: 'bronze' as const, label: 'Mint Bronze NFT', color: '#b45309' };
+    return null;
+  };
+
+  const mintInfo = getMintTier();
+
+  const handleMintNft = useCallback(async () => {
+    if (!mintInfo) return;
+    try {
+      setMintLoading(true);
+      console.log("minting start...")
+      const res = await tipAPI.mintMilestoneNFT(userData?.id || 'null');
+      console.log("minting ends...")
+      console.log(res);
+      if (res.success) {
+        await refreshProfile();
+      }
+    } catch {
+      // no-op
+    } finally {
+      setMintLoading(false);
+    }
+  }, [mintInfo, refreshProfile, userData?.id]);
+
   const renderHeader = useCallback(() => (
       <>
         <ProfileHeader 
@@ -246,6 +275,25 @@ export default function Profile() {
           nfts={karmaData?.nfts || 0}
           onFriendsPress={handleFriendsPress}
         />
+
+        {mintInfo && (
+          <View className="px-4 mt-3">
+            <TouchableOpacity
+              onPress={handleMintNft}
+              disabled={mintLoading}
+              className="rounded-2xl items-center justify-center py-3 border"
+              style={{ borderColor: mintInfo.color, backgroundColor: `${mintInfo.color}22` }}
+              activeOpacity={0.8}
+            >
+              <Text className="font-semibold" style={{ color: mintInfo.color }}>
+                {mintLoading ? 'Minting...' : mintInfo.label}
+              </Text>
+              <Text className="text-xs mt-1" style={{ color: mintInfo.color }}>
+                Requires current karma: {karmaPoints}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
       {/* Tab Navigation */}
         <View className="flex-row border-t border-zinc-900 mb-2">
@@ -307,7 +355,7 @@ export default function Profile() {
           </TouchableOpacity>
       </View>
     </>
-  ), [userData, karmaData, friendsCount, buzzes.length, activeTab, handleFriendsPress, handleTabChange, tipStats.tipsReceived]);
+  ), [userData, karmaData, friendsCount, buzzes.length, activeTab, handleFriendsPress, handleTabChange, tipStats.tipsReceived, mintInfo, mintLoading, karmaPoints, handleMintNft]);
 
   const renderBuzzItem = useCallback(({ item }: { item: BuzzData }) => (
     <BuzzCard buzz={item} onVoteUpdate={() => loadUserBuzzes(1, true)} />
@@ -383,15 +431,15 @@ export default function Profile() {
 
   if (!userData) {
     return (
-      <SafeAreaView className="flex-1 bg-black items-center justify-center">
+      <View className="flex-1 bg-black items-center justify-center">
         <ActivityIndicator size="large" color="#ffffff" />
         <Text className="text-white mt-4">Loading profile...</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-black">
+    <View className="flex-1 bg-black">
       {/* Header */}
       <View className="flex-row items-center justify-between px-6 py-4 border-b border-zinc-900">
         <Text 
@@ -437,6 +485,6 @@ export default function Profile() {
         }
         contentContainerStyle={{ paddingBottom: 100 }}
       />
-    </SafeAreaView>
+    </View>
   );
 }

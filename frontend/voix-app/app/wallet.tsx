@@ -25,7 +25,6 @@ export default function Wallet() {
   const copyPublicKey = () => {
     if (walletDetails?.publicKey) {
       Clipboard.setString(walletDetails.publicKey);
-      Alert.alert('Copied!', 'Public key copied to clipboard');
     }
   };
 

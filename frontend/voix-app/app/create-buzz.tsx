@@ -9,7 +9,6 @@ export default function CreateBuzzModal() {
 
   const handleClose = () => {
     if (isLoading) {
-      Alert.alert('Please wait', 'Your buzz is being posted...');
       return;
     }
     router.back();
@@ -38,7 +37,6 @@ export default function CreateBuzzModal() {
         
         // Show success message after navigation
         setTimeout(() => {
-          Alert.alert('Success! 🎉', 'Your buzz has been posted');
         }, 300);
       } else {
         throw new Error(response.error || 'Failed to create buzz');

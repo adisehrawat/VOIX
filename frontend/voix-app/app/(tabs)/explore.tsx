@@ -2,7 +2,6 @@ import { StickNoBills_500Medium, useFonts } from "@expo-google-fonts/stick-no-bi
 import { Search, User } from 'lucide-react-native';
 import { useState, useEffect, useCallback } from 'react';
 import { ActivityIndicator, FlatList, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { searchAPI, friendRequestAPI, BuzzData } from '../../services/api';
 import { useProfile } from '../../contexts/ProfileContext';
@@ -244,7 +243,7 @@ const Explore = () => {
   if (!fontsLoaded) return null;
 
   return (
-    <SafeAreaView className="flex-1 bg-black">
+    <View className="flex-1 bg-black">
       {/* Header */}
       <View className="flex-row items-center justify-between px-6 py-4 border-b border-zinc-900">
         <Text 
@@ -336,7 +335,7 @@ const Explore = () => {
         onEndReachedThreshold={0.5}
         contentContainerStyle={{ paddingBottom: 100 }}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 

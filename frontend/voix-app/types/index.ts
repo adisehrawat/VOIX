@@ -1,10 +1,12 @@
 // User Types
 export interface User {
   id: string;
-  name: string;
+  name?: string;
+  Name?: string;
   username?: string;
   email: string;
-  imageUrl: string;
+  imageUrl?: string;
+  ImageUrl?: string;
   publicKey: string;
   walletId: string;
   authType: 'Google' | 'Password';
@@ -61,7 +63,7 @@ export interface Tip {
 
 // Karma Types
 export interface Karma {
-  userId: string;
+  userid: string;
   points: string;
   nfts: number;
   user: User;

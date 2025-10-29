@@ -32,7 +32,7 @@ export default function EnhancedTipModal({
   const [selectedAmount, setSelectedAmount] = useState<string | null>(null);
   const [selectedToken, setSelectedToken] = useState('SOL');
   const [tipping, setTipping] = useState(false);
-  const { userData } = useProfile();
+  const { userData, karmaData } = useProfile();
   const { walletDetails, loading, refreshWallet } = useWallet();
 
   const balances = walletDetails?.balances || { SOL: 0, USDC: 0 };
@@ -74,7 +74,6 @@ export default function EnhancedTipModal({
 
   const handleTip = async () => {
     if (!buzzId || !selectedAmount || !userData || !recipient) {
-      Alert.alert('Error', 'Missing required information');
       return;
     }
 
@@ -82,12 +81,10 @@ export default function EnhancedTipModal({
     const balance = balances[selectedToken as keyof typeof balances] as number;
     
     if (amount > balance) {
-      Alert.alert('Insufficient Balance', `You have ${balance.toFixed(4)} ${selectedToken}`);
       return;
     }
 
     if (amount <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid tip amount');
       return;
     }
 
@@ -100,6 +97,7 @@ export default function EnhancedTipModal({
         selectedToken,
         recipient.publicKey || ''
       );
+
 
       if (response.success) {
         Alert.alert(
@@ -122,7 +120,6 @@ export default function EnhancedTipModal({
       }
     } catch (error) {
       console.error('Tip error:', error);
-      Alert.alert('Error', 'Failed to send tip. Please check your connection and try again.');
     } finally {
       setTipping(false);
     }

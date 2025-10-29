@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, Text, TouchableOpacity, View } from "react-native";
+import { Animated, Easing, View } from "react-native";
 import AnimatedLogo from "./AnimatedLogo";
 
 interface WelcomeScreenProps {

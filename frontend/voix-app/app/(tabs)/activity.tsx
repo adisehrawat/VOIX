@@ -2,7 +2,6 @@ import { StickNoBills_500Medium, useFonts } from "@expo-google-fonts/stick-no-bi
 import { MessageCircle, UserPlus } from "lucide-react-native";
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import FriendRequestCard from '../../components/friends/FriendRequestCard';
 import { useProfile } from '../../contexts/ProfileContext';
 import { buzzAPI, friendRequestAPI } from '../../services/api';
@@ -145,8 +144,8 @@ const Activity = () => {
     </>
   );
 
-  return (
-    <SafeAreaView className="flex-1 bg-black">
+  return (  
+    <View className="flex-1 bg-black">
       {/* Header */}
       <View className="flex-row items-center justify-between px-6 py-4 border-b border-zinc-900">
         <Text 
@@ -183,7 +182,7 @@ const Activity = () => {
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       />)}
-    </SafeAreaView>
+    </View>
   );
 };
 

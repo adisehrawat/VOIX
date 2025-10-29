@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL, STORAGE_KEYS } from '../config/constants';
-
+import { STORAGE_KEYS } from '../config/constants';
+import ENV from '../config/env';
 
 export const TOKEN_KEY = STORAGE_KEYS.TOKEN;
 
@@ -33,7 +33,7 @@ const apiCall = async (
   body?: any,
   requiresAuth: boolean = false
 ) => {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = `${ENV.apiUrl}${endpoint}`;
   
 
   const headers: HeadersInit = {
@@ -352,8 +352,8 @@ export const tipAPI = {
    * Requires: Authentication
    * Milestones: 1000 points (Bronze), 5000 points (Silver), 10000 points (Gold)
    */
-  mintMilestoneNFT: async () => {
-    return apiCall('/tip/mint-milestone-nft', 'POST', {}, true);
+  mintMilestoneNFT: async (userid: string) => {
+    return apiCall('/tip/mint-milestone-nft', 'POST', {user: {id: userid}}, true);
   },
 };
 

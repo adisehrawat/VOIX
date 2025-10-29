@@ -124,6 +124,8 @@ tiprouter.post("/mint-milestone-nft", AuthMiddleware, async (req, res) => {
         } else if(Number(getkarma.points) >= 10000) {
             await VoixContract.mintMilestoneNft(user_pub_key, 3, getuser.wallet_id)
             await KarmaService.updateUserKarma(user.id, 3)
+        } else {
+            console.error("User does not have enough karma to mint an NFT")
         }
 
         res.json({ success: true })

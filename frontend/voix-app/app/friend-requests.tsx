@@ -71,7 +71,6 @@ export default function FriendRequestsScreen() {
       }
     } catch (error) {
       console.error('Load requests error:', error);
-      Alert.alert('Error', 'Failed to load friend requests');
       setReceivedRequests([]);
       setSentRequests([]);
     } finally {
@@ -97,15 +96,12 @@ export default function FriendRequestsScreen() {
       if (response.success) {
         setReceivedRequests(prev => prev.filter(req => req.id !== requestId));
         refreshProfile(); // Refresh friend count
-        Alert.alert('Success', 'Friend request accepted!');
         // Reload requests to ensure UI is in sync
         loadRequests();
       } else {
-        Alert.alert('Error', 'Failed to accept friend request');
       }
     } catch (error) {
       console.error('Accept request error:', error);
-      Alert.alert('Error', 'Failed to accept friend request');
     } finally {
       setActionLoading(null);
     }
@@ -118,13 +114,10 @@ export default function FriendRequestsScreen() {
       
       if (response.success) {
         setReceivedRequests(prev => prev.filter(req => req.id !== requestId));
-        Alert.alert('Success', 'Friend request rejected');
       } else {
-        Alert.alert('Error', 'Failed to reject friend request');
       }
     } catch (error) {
       console.error('Reject request error:', error);
-      Alert.alert('Error', 'Failed to reject friend request');
     } finally {
       setActionLoading(null);
     }
@@ -137,13 +130,10 @@ export default function FriendRequestsScreen() {
       
       if (response.success) {
         setSentRequests(prev => prev.filter(req => req.id !== requestId));
-        Alert.alert('Success', 'Friend request cancelled');
       } else {
-        Alert.alert('Error', 'Failed to cancel friend request');
       }
     } catch (error) {
       console.error('Cancel request error:', error);
-      Alert.alert('Error', 'Failed to cancel friend request');
     } finally {
       setActionLoading(null);
     }

@@ -40,9 +40,6 @@ export default function Index() {
         return;
       }
       
-      // Don't auto-refresh - user can pull-to-refresh if they want
-      // This keeps the scroll position and data stable when returning from buzz detail
-      console.log('Screen focused - keeping existing data');
     }, [])
   );
 
@@ -56,13 +53,11 @@ export default function Index() {
         setLoading(true);
       }
       
-      console.log(`Loading buzzes - page: ${pageNum}`);
 
       // Use context to get buzzes (with caching)
       const newBuzzes = await getBuzzes(pageNum, isRefresh);
       
       if (newBuzzes && newBuzzes.length > 0) {
-        console.log(`Loaded ${newBuzzes.length} buzzes from context`);
 
         if (isRefresh) {
           setBuzzes(newBuzzes);
@@ -153,7 +148,7 @@ export default function Index() {
   if (!fontsLoaded) return null;
 
   return (
-    <View className="flex-1 bg-black">  {/* Header */}
+    <View className="flex-1 bg-black"> 
       <View className="flex-row items-center justify-between px-6 py-4 border-b border-zinc-900">
         <Text 
           className="text-white text-5xl"
