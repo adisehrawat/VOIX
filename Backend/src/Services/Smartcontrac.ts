@@ -13,12 +13,12 @@ import {
 import { BN } from "@coral-xyz/anchor";
 import * as anchor from "@coral-xyz/anchor";
 
-const wallet = JSON.parse(fs.readFileSync("../../admin_key.json", "utf-8"));
+const wallet = JSON.parse(fs.readFileSync("./admin_key.json", "utf-8"));
 const CONFIG_SEED = Buffer.from("config");
 const USER_SEED = Buffer.from("user");
 const MINT_AUTHORITY_SEED = Buffer.from("mint_authority");
 
-const admin = Keypair.fromSecretKey(wallet)
+const admin = Keypair.fromSecretKey(Buffer.from(wallet))
 const [globalConfigPda] = PublicKey.findProgramAddressSync(
     [CONFIG_SEED],
     program.programId
@@ -89,7 +89,7 @@ export class VoixContract {
 
     static async Intialize_user(user_pub_key: PublicKey) {
         const user1AccountPda = this.getUserPda(user_pub_key)
-        await program.methods
+        const result = await program.methods
             .initializeUser()
             .accounts({
                 admin: admin.publicKey,
@@ -100,6 +100,8 @@ export class VoixContract {
             })
             .signers([admin])
             .rpc();
+
+        console.log(result)
     }
 
 

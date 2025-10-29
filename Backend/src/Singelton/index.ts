@@ -15,14 +15,9 @@ export const connection = new Connection("https://api.devnet.solana.com");
 
 const loadKeypair = (): Keypair => {
   try {
-    if (process.env.KEYPAIR_PATH) {
-      const secret = JSON.parse(fs.readFileSync("../../admin_key.json", "utf-8"));
+      const secret = JSON.parse(fs.readFileSync("./admin_key.json", "utf-8"));
       return Keypair.fromSecretKey(new Uint8Array(secret));
-    }
     
-    const homeDir = require('os').homedir();
-    const secret = JSON.parse(fs.readFileSync(`${homeDir}/.config/solana/id.json`, "utf-8"));
-    return Keypair.fromSecretKey(new Uint8Array(secret));
   } catch (error) {
     console.error("Failed to load keypair:", error);
     throw error;
@@ -36,7 +31,7 @@ const provider = new AnchorProvider(connection as any, wallet, {
   preflightCommitment: "confirmed",
 });
 
-const idlFile = fs.readFileSync("../target/idl/voix.json", "utf-8");
+const idlFile = fs.readFileSync("./src/target/idl/voix.json", "utf-8");
 const IDL = JSON.parse(idlFile);
 
 
