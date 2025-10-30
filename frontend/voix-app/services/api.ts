@@ -36,7 +36,7 @@ const apiCall = async (
   body?: any,
   requiresAuth: boolean = false
 ) => {
-  const url = `${ENV.apiUrl}${endpoint}`;
+  const url = `${"http://44.210.156.140:3000/api/v1"}${endpoint}`;
   
 
   const headers: HeadersInit = {
