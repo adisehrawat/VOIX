@@ -1,8 +1,7 @@
-import Constants from 'expo-constants';
 
 // Get environment variables from app config
 const ENV = {
-  apiUrl: Constants.expoConfig?.extra?.apiUrl || "",
+  apiUrl: "http://44.210.156.140:3000/api/v1",
 };
 
 // Warn if API URL is not configured

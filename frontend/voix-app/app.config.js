@@ -1,69 +1,66 @@
 export default {
-  expo: {
-    name: "Voix",
-    slug: "voix-app",
-    version: "1.0.0",
-    orientation: "portrait",
-    icon: "./assets/images/voixlogo.png",
-    scheme: "voixapp",
-    userInterfaceStyle: "automatic",
-    newArchEnabled: true,
-    ios: {
-      supportsTablet: true,
-      infoPlist: {
-        NSAppTransportSecurity: {
-          NSAllowsArbitraryLoads: true,
-          NSExceptionDomains: {
-            localhost: {
-              NSExceptionAllowsInsecureHTTPLoads: true,
+  "expo": {
+    "name": "Voix",
+    "slug": "voix-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/voixlogo.png",
+    "scheme": "voixapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "localhost": {
+              "NSExceptionAllowsInsecureHTTPLoads": true
             },
             "127.0.0.1": {
-              NSExceptionAllowsInsecureHTTPLoads: true,
-            },
-          },
-        },
+              "NSExceptionAllowsInsecureHTTPLoads": true
+            }
+          }
+        }
+      }
+    },
+    "build": {
+      "production": {
+        "android": {
+          "buildType": "apk",
+          "cache": {
+            "key": "nativewind-cache"
+          }
+        }
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/voixlogo.png"
       },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.adityavoix.voixapp"
     },
-    build: {
-      production: {
-        android: {
-          buildType: "apk",
-          node: "20.13.1",
-          env: {
-            NODE_ENV: "production",
-            EXPO_USE_FAST_RESOLVER: "1",
-          },
-          cache: {
-            key: "nativewind-cache",
-          },
-        },
-      },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/voixlogo.png",
+      "bundler": "metro"
     },
-    android: {
-      adaptiveIcon: {
-        backgroundColor: "#E6F4FE",
-        foregroundImage: "./assets/images/voixlogo.png",
-      },
-      edgeToEdgeEnabled: true,
-      predictiveBackGestureEnabled: false,
-      package: "com.voixadi.voixapp",
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
     },
-    web: {
-      output: "static",
-      favicon: "./assets/images/voixlogo.png",
-      bundler: "metro",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "49029896-19d5-49de-b96a-1d26c3b2b5ee"
+      }
     },
-    plugins: ["expo-router", "expo-font"],
-    experiments: {
-      typedRoutes: true,
-    },
-    extra: {
-      router: {},
-      apiUrl: process.env.API_URL,
-      eas: {
-        projectId: "5846976e-f2e5-4533-9993-06af66661fe7",
-      },
-    },
-    owner: "voixadi",
-  },
+    "owner": "adityavoix"
+  }
 };
