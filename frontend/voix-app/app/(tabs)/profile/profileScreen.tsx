@@ -303,6 +303,7 @@ export default function Profile() {
             activeTab === 'buzzes' ? 'border-white' : 'border-transparent'
             }`}
             activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
           >
           <View className="items-center">
             <Grid3x3
@@ -322,6 +323,7 @@ export default function Profile() {
             activeTab === 'replies' ? 'border-white' : 'border-transparent'
             }`}
             activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
           >
           <View className="items-center">
             <MessageCircle
@@ -341,6 +343,7 @@ export default function Profile() {
             activeTab === 'transactions' ? 'border-white' : 'border-transparent'
             }`}
             activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
           >
           <View className="items-center">
             <ArrowLeftRight
@@ -467,10 +470,15 @@ export default function Profile() {
       </View>
 
       <FlatList
+        key={activeTab}
         data={activeTab === 'buzzes' ? buzzes : activeTab === 'replies' ? replies : transactions}
-        keyExtractor={(item, index) => `${item.id}-${index}`}
+        extraData={activeTab}
+        keyExtractor={(item: any, index) => {
+          const key = item?.id ?? item?.transactionId ?? item?.transactionid;
+          return key ? String(key) : `idx-${index}`;
+        }}
         renderItem={activeTab === 'buzzes' ? renderBuzzItem : activeTab === 'replies' ? renderReplyItem : renderTransactionItem}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={renderHeader()}
         ListEmptyComponent={renderEmptyState}
         ListFooterComponent={renderFooter}
         showsVerticalScrollIndicator={false}

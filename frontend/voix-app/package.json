@@ -5,8 +5,8 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint"
   },
@@ -17,8 +17,9 @@
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
-    "@solana/spl-token": "^0.4.14",
+    "@solana/spl-token": "^0.1.8",
     "@solana/web3.js": "^1.98.4",
+    "dotenv": "^17.2.3",
     "expo": "54.0.21",
     "expo-clipboard": "~8.0.7",
     "expo-constants": "~18.0.10",
