@@ -14,9 +14,12 @@
     "production": {
       "autoIncrement": true,
       "android": {
-        "buildType": "apk"
-      },
-      "ios": {}
+        "buildType": "apk",
+        "env": {
+          "NODE_ENV": "production",
+          "EXPO_USE_FAST_RESOLVER": "1"
+        }
+      }
     }
   },
   "submit": {

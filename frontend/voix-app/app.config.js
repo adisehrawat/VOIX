@@ -46,7 +46,7 @@ export default {
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
-      package: "com.voixleader.voixapp",
+      package: "com.voixadi.voixapp",
     },
     web: {
       output: "static",
@@ -56,15 +56,14 @@ export default {
     plugins: ["expo-router", "expo-font"],
     experiments: {
       typedRoutes: true,
-      reactCompiler: true,
     },
     extra: {
       router: {},
       apiUrl: process.env.API_URL,
       eas: {
-        projectId: "46f4b65f-6af9-49b4-aa6b-5383111c3827",
+        projectId: "5846976e-f2e5-4533-9993-06af66661fe7",
       },
     },
-    owner: "voixbuzz",
+    owner: "voixadi",
   },
 };
