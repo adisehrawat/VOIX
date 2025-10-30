@@ -43,14 +43,16 @@ function RootLayoutNav() {
         headerShown: false,
         contentStyle: { backgroundColor: '#000000' }
       }}>
-        <Stack.Protected guard={!isAuthenticated}>
-          <Stack.Screen name='(auth)' />
-        </Stack.Protected>
-
-        <Stack.Protected guard={!!isAuthenticated}>
-          <Stack.Screen name='(tabs)' />
-          <Stack.Screen name='create-buzz' />
-        </Stack.Protected>
+        {!isAuthenticated ? (
+          <>
+            <Stack.Screen name='(auth)' />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name='(tabs)' />
+            <Stack.Screen name='create-buzz' />
+          </>
+        )}
       </Stack>
     </View>
   );

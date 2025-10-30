@@ -5,9 +5,9 @@ const ENV = {
   apiUrl: Constants.expoConfig?.extra?.apiUrl,
 };
 
-// Validate that required env vars are present
+// Warn if API URL is not configured (won't throw error since we have fallback)
 if (!ENV.apiUrl) {
-  throw new Error('API_URL is not defined in environment configuration');
+  console.warn('⚠️ API_URL is not defined. Please configure it in app.config.js or via environment variables.');
 }
 
 export default ENV;

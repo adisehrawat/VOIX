@@ -9,13 +9,13 @@ module.exports = function (api) {
         [
           "react-native-css-interop/plugin",
           {
-            // Helps NativeWind resolve classNames from your src/app
-            searchPaths: ["./app", "./src"]
+            searchPaths: ["./app", "./src"],
+            // Add this for production builds
+            mode: "transformOnly"
           }
         ],
-        // THIS MUST BE LAST — REQUIRED even if using JS mode
+        // Reanimated must be last
         "react-native-reanimated/plugin"
       ],
     };
   };
-  
