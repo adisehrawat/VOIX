@@ -7,7 +7,7 @@ export default {
     icon: "./assets/images/voixlogo.png",
     scheme: "voixapp",
     userInterfaceStyle: "automatic",
-    newArchEnabled: false,
+    newArchEnabled: true,
     ios: {
       supportsTablet: true,
       infoPlist: {
