@@ -55,9 +55,9 @@ export default {
       "router": {},
       "apiUrl": process.env.API_URL,
       "eas": {
-        "projectId": "facf2abd-bf00-46dc-81df-a79303afa2f9"
+        "projectId": "46f4b65f-6af9-49b4-aa6b-5383111c3827"
       }
     },
-    "owner": "voixleader"
+    "owner": "voixbuzz"
   }
 };
