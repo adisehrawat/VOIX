@@ -8,11 +8,6 @@ export default {
     "scheme": "voixapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
-    "install": {
-      "exclude": [
-        "react-native-reanimated"
-      ]
-    },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {

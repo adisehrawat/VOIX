@@ -6,11 +6,9 @@ import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { ProfileProvider } from "../contexts/ProfileContext";
 import { WalletProvider } from "../contexts/WalletContext";
 import { BuzzProvider } from "../contexts/BuzzContext";
-import * as SplashScreen from "expo-splash-screen";
 
 import "../global.css";
 
-SplashScreen.preventAutoHideAsync();
 
 
 
