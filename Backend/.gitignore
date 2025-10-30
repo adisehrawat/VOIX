@@ -3,7 +3,12 @@ node_modules
 .env
 
 /src/generated/prisma
+/dist/generated/prisma
+
+
+dist
+.vercel
 
 admin_key.json
 
-dist
+vercel.json
