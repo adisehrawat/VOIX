@@ -36,7 +36,7 @@ const apiCall = async (
   body?: any,
   requiresAuth: boolean = false
 ) => {
-  const url = `${"http://44.210.156.140:3000/api/v1"}${endpoint}`;
+  const url = `${"https://d2goyz5xza1how.cloudfront.net/api/v1"}${endpoint}`;
   
 
   const headers: HeadersInit = {
@@ -97,6 +97,7 @@ export const authAPI = {
    * POST /api/v1/auth/signin
    */
   signIn: async (email: string, password: string) => {
+    console.log("Sent to backned");
     return apiCall('/auth/signin', 'POST', {
       email,
       password,
